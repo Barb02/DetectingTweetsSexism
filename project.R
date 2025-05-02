@@ -7,12 +7,15 @@ library(dplyr)
 library(recommenderlab)
 library(syuzhet)
 library(textclean)
+library(rpart)
+library(ROCR)
+source("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/metrics_functions.R")
 
 # ----------------------------------- Initial Analysis -----------------------------------
 
 #df = read_csv("/home/barbara/MDS/ATDS/DetectingTweetsSexism/tables/EXIST2025_train.csv")
-#df = read_csv("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/EXIST2025_train.csv")
-df = read_csv("C:/Users/marta/OneDrive/Documentos/FCUP/TACD/project/DetectingTweetsSexism/tables/EXIST2025_train.csv")
+df = read_csv("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/EXIST2025_train.csv")
+#df = read_csv("C:/Users/marta/OneDrive/Documentos/FCUP/TACD/project/DetectingTweetsSexism/tables/EXIST2025_train.csv")
 
 str(df)
 dim(df)
@@ -20,7 +23,7 @@ summary(df)
 
 
 tweets = unique(df$tweet)
-tweets
+#tweets
 length(tweets)
 
 # ----------------------------------- Removing Unimportant Things -----------------------------------
@@ -31,7 +34,6 @@ tweets <- gsub("http\\S+", "", tweets) # remove links
 tweets <- gsub("\\.(\\S)", ". \\1", tweets, perl = TRUE)
 
 # ----------------------------------- NLP -----------------------------------
-
 
 corpus <- corpus(tweets)
 toks <- tokens(
@@ -66,11 +68,118 @@ dfm_tfidf
 topfeatures(dfm, 200)
 topfeatures(dfm_tfidf, 200)
 
+# Collocs
+collocs <- textstat_collocations(toks,
+                                 size= 2,
+                                 min_count = 5)
+head(collocs,10)
+
+# Correlations 
+dfm_trimmed <- dfm_trim(dfm_tfidf, min_termfreq = 10)
+
+correlations <- textstat_simil(
+  x= dfm_trimmed, 
+  margin= "features",
+  method= "correlation"
+)
+
+corr_list <- as.list(correlations)
+
+corr_filtered <- lapply(corr_list, function(x) x[x>0.8])
+
+for (term in names(corr_filtered)) {
+  correlated_terms <- names(corr_filtered[[term]])
+  if (length(correlated_terms) > 0) {
+    cat("\nPalavra:", term, "\nCorrelacionadas:", paste(correlated_terms, collapse = ", "), "\n")
+  }
+}
+
 # ----------------------------------- Sentiment Analysis -----------------------------------
 
-sent <- get_sentiment(df$tweet, method = "syuzhet")
-print(sent)
-emotions <- get_nrc_sentiment(df$tweet)
-head(emotions,10)
+tweets2 = unique(df$tweet)
 
+sent <- get_sentiment(tweets2, method = "syuzhet")
+print(sent)
+
+emotions <- get_nrc_sentiment(tweets2)
+head(emotions)
+
+# ----------------------------------- Preparing a new data set for modeling -----------------------------------
+
+# Top 10 Features in columns as binary
+top_feats <- names(topfeatures(dfm, 10))
+dfm_top <- dfm_select(dfm, pattern = top_feats)
+dfm_binary <- convert(dfm_top, to = "data.frame")
+dfm_binary <- dfm_binary[, -1]
+dfm_binary$tweet <- tweets2
+
+# Sentiments and emotions as columns
+features_df <- data.frame(
+  tweet = tweets2,
+  sentiment = sent,
+  emotions,
+  stringsAsFactors = FALSE
+)
+
+features_df <- cbind(features_df, dfm_binary[, -ncol(dfm_binary)])
+
+df2 <- merge(df, features_df, by = "tweet")
+df2 <- df2 %>% select(1, 10:ncol(df2))
+
+# ----------------------------------- Statistic tests -----------------------------------
+
+# -- Test for Sentiment --
+
+t.test(sentiment ~ label_task1_1, data = df2) 
+# Tweets labeled as sexist have significantly more negative sentiment than non-sexist ones
+
+# -- Tests for Emotions --
+
+e <- c("anger", "anticipation", "disgust", "fear", "joy", "sadness", "surprise", "trust", "negative", "positive")
+for (emotion in e) {
+  print(paste("Test for", emotion))
+  print(t.test(df2[[emotion]] ~ df2$label_task1_1))
+}
+# Only fear and anticipation don't have a significant difference between the means 
+
+# -- Tests for features --
+
+for (feature in top_feats) {
+  cat("\nTest for feature:", feature, "\n")
+  table_feature_label <- table(df2[[feature]], df2$label_task1_1)
+  chisq_result <- chisq.test(table_feature_label)
+  print(chisq_result)
+}
+# Only the stemmed words "one" and "can" aren't significantly correlated
+
+df2 <- df2 %>%
+  select(-fear, -anticipation, -one, -can)
+
+# ----------------------------------- Modeling ----------------------------------- 
+
+set.seed(123)
+
+# 80/20
+train_index <- sample(seq_len(nrow(df2)), size = 0.8 * nrow(df2))
+train_data <- df2[train_index, ]
+test_data <- df2[-train_index, ]
+
+# -- Decision Trees --
+
+tree_model <- rpart(label_task1_1 ~ ., data = train_data, method = "class")
+preds <- predict(tree_model, test_data, type = "class")
+
+test_data$label_task1_1 <- factor(test_data$label_task1_1, levels = c("YES", "NO"))
+preds <- factor(preds, levels = c("YES", "NO"))
+
+conf_matrix <- table(Predicted = preds, Actual = test_data$label_task1_1)
+print(conf_matrix)
+
+metrics <- calculate_metrics(conf_matrix, class1 = "YES", class2 = "NO")
+
+cat(sprintf("Metrics for \"YES\" -> Precision: %.4f, Recall: %.4f, F1-Score: %.4f\n", 
+            metrics$Precision_class1, metrics$Recall_class1, metrics$F1_Score_class1))
+cat(sprintf("Metrics for Class \"NO\" -> Precision: %.4f, Recall: %.4f, F1-Score: %.4f\n", 
+            metrics$Precision_class2, metrics$Recall_class2, metrics$F1_Score_class2))
+cat(sprintf("\nAccuracy: %.4f\n", metrics$Accuracy))
 
