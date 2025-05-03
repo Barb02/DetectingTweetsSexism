@@ -11,6 +11,8 @@ library(rpart)
 library(ROCR)
 library(stringr)
 source("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/metrics_functions.R")
+source("C:/Users/marta/OneDrive/Documentos/FCUP/TACD/project/DetectingTweetsSexism/metrics_functions.R")
+
 
 # ----------------------------------- Initial Analysis -----------------------------------
 
