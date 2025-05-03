@@ -9,6 +9,7 @@ library(syuzhet)
 library(textclean)
 library(rpart)
 library(ROCR)
+library(stringr)
 source("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/metrics_functions.R")
 
 # ----------------------------------- Initial Analysis -----------------------------------
@@ -72,7 +73,8 @@ topfeatures(dfm_tfidf, 200)
 collocs <- textstat_collocations(toks,
                                  size= 2,
                                  min_count = 5)
-head(collocs,10)
+collocs_ordenado <- collocs %>% arrange(desc(count))
+top_collocs <- head(collocs_ordenado,10)
 
 # Correlations 
 dfm_trimmed <- dfm_trim(dfm_tfidf, min_termfreq = 10)
@@ -155,6 +157,28 @@ for (feature in top_feats) {
 df2 <- df2 %>%
   select(-fear, -anticipation, -one, -can)
 
+# -- Look_Like (The 2 words that most appear together) is worth as a binary column? --
+colloc_strings <- sapply(top_collocs$collocation, paste, collapse = " ")
+df2$look_like <- ifelse(str_detect(df2$tweet, "\\blook like\\b"), 1, 0)
+
+contingency_table <- table(df2$look_like, df2$label_task1_1)
+contingency_table
+
+chi_result <- chisq.test(contingency_table)
+chi_result
+# It is statistically significant but it might not be worth it considering the amount of times it appears
+
+# -- How many times do superwoman and syndrome appear in a tweet? --
+
+# Only 54 so it's not worth investigating more 
+
+# -- How many times do feminin and mystiqu appear in a tweet? --
+
+# ...
+
+df2 <- df2 %>%
+  select(-look_like)
+
 # ----------------------------------- Modeling ----------------------------------- 
 
 set.seed(123)
@@ -182,4 +206,6 @@ cat(sprintf("Metrics for \"YES\" -> Precision: %.4f, Recall: %.4f, F1-Score: %.4
 cat(sprintf("Metrics for Class \"NO\" -> Precision: %.4f, Recall: %.4f, F1-Score: %.4f\n", 
             metrics$Precision_class2, metrics$Recall_class2, metrics$F1_Score_class2))
 cat(sprintf("\nAccuracy: %.4f\n", metrics$Accuracy))
+
+
 
