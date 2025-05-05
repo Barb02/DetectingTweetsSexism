@@ -7,18 +7,12 @@ library(dplyr)
 library(recommenderlab)
 library(syuzhet)
 library(textclean)
-library(rpart)
-library(ROCR)
 library(stringr)
-#source("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/metrics_functions.R")
-#source("C:/Users/marta/OneDrive/Documentos/FCUP/TACD/project/DetectingTweetsSexism/metrics_functions.R")
-source("/home/barbara/MDS/ATDS/DetectingTweetsSexism/metrics_functions.R")
-
 
 # ----------------------------------- Initial Analysis -----------------------------------
 
-df = read_csv("/home/barbara/MDS/ATDS/DetectingTweetsSexism/tables/EXIST2025_train.csv")
-#df = read_csv("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/EXIST2025_train.csv")
+#df = read_csv("/home/barbara/MDS/ATDS/DetectingTweetsSexism/tables/EXIST2025_train.csv")
+df = read_csv("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/EXIST2025_train.csv")
 #df = read_csv("C:/Users/marta/OneDrive/Documentos/FCUP/TACD/project/DetectingTweetsSexism/tables/EXIST2025_train.csv")
 
 str(df)
@@ -211,35 +205,9 @@ sum(dfm_temp$gold > 0 & dfm_temp$digger > 0) # 19
 df2 <- df2 %>%
   select(-look_like)
 
-# ----------------------------------- Modeling ----------------------------------- 
+# Exporting the data set to model in Python
 
-# it might be good to use tf-idf instead of raw counts on the other models
-
-set.seed(123)
-
-# 80/20
-train_index <- sample(seq_len(nrow(df2)), size = 0.8 * nrow(df2))
-train_data <- df2[train_index, ]
-test_data <- df2[-train_index, ]
-
-# -- Decision Trees --
-
-tree_model <- rpart(label_task1_1 ~ ., data = train_data, method = "class")
-preds <- predict(tree_model, test_data, type = "class")
-
-test_data$label_task1_1 <- factor(test_data$label_task1_1, levels = c("YES", "NO"))
-preds <- factor(preds, levels = c("YES", "NO"))
-
-conf_matrix <- table(Predicted = preds, Actual = test_data$label_task1_1)
-print(conf_matrix)
-
-metrics <- calculate_metrics(conf_matrix, class1 = "YES", class2 = "NO")
-
-cat(sprintf("Metrics for \"YES\" -> Precision: %.4f, Recall: %.4f, F1-Score: %.4f\n", 
-            metrics$Precision_class1, metrics$Recall_class1, metrics$F1_Score_class1))
-cat(sprintf("Metrics for Class \"NO\" -> Precision: %.4f, Recall: %.4f, F1-Score: %.4f\n", 
-            metrics$Precision_class2, metrics$Recall_class2, metrics$F1_Score_class2))
-cat(sprintf("\nAccuracy: %.4f\n", metrics$Accuracy))
-
+#write.csv(df2, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/df2.csv", row.names = FALSE)
+#write.csv(df2, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/df2_tfidf.csv", row.names = FALSE)
 
 
