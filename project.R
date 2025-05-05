@@ -170,7 +170,7 @@ for (feature in top_feats) {
   print(chisq_result)
   print(chisq_result$expected)
 }  # this test can only be done for dfm, not for tf idf bc tf idf represent weights and not counts
-# Only the stemmed words "one" and "can" aren't significantly correlated
+# Only the stemmed words "one" and "can" are independent from the label
 
 df2 <- df2 %>%
   select(-fear, -anticipation, -one, -can)
