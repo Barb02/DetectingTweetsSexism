@@ -23,21 +23,6 @@ df_annotators <- df[!duplicated(df$annotator_id), ]
 dim(df_annotators)
 
 
-annotator_stats <- df %>%
-  group_by(annotator_id, gender, age, country) %>%
-  summarise(
-    total_labels = n(),
-    yes_labels = sum(label_task1_1 == "YES"),
-    yes_rate = yes_labels / total_labels
-  )
-
-
-ggplot(annotator_stats, aes(x = age, y = yes_rate)) +
-  geom_boxplot() +
-  labs(title = "Sexist Labeling Rate by Gender", y = "Proportion of YES Labels")
-
-table(annotator_stats$age, annotator_stats$yes_rate > 0.5)
-
 # GENDER
 
 unique(df_annotators$gender)
