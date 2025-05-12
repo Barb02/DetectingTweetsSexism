@@ -19,9 +19,22 @@ str(df)
 dim(df)
 summary(df)
 
+# ----------------------------------- Changing to one per tweet -----------------------------------
 
-tweets = unique(df$tweet)
-#tweets
+df <- df %>%
+  group_by(tweet) %>%
+  summarise(
+    count_yes = sum(label_task1_1 == "YES", na.rm = TRUE),
+    count_no = sum(label_task1_1 == "NO", na.rm = TRUE)
+  ) %>%
+  filter(count_yes != count_no) %>%
+  mutate(final_label = ifelse(count_yes > count_no, "YES", "NO"))
+
+df <- df %>%
+  select(tweet, final_label)
+
+tweets = df$tweet
+
 length(tweets)
 
 # ----------------------------------- Removing Unimportant Things -----------------------------------
@@ -50,7 +63,6 @@ ndoc(dfm)
 nfeat(dfm)
 featnames(dfm)
 textplot_wordcloud(dfm, min_count = 50) 
-
 
 any(grepl("&amp;", featnames(dfm)))  # & removed
 any(grepl("peglulu2", featnames(dfm)))
@@ -107,7 +119,7 @@ for (term in names(corr_filtered)) {
 
 # ----------------------------------- Sentiment Analysis -----------------------------------
 
-tweets2 = unique(df$tweet)
+tweets2 = df$tweet
 
 sent <- get_sentiment(tweets2, method = "syuzhet")
 print(sent)
