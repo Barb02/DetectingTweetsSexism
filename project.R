@@ -8,6 +8,8 @@ library(recommenderlab)
 library(syuzhet)
 library(textclean)
 library(stringr)
+library(tidyverse)
+library(gridExtra)
 
 # ----------------------------------- Initial Analysis -----------------------------------
 
@@ -32,6 +34,9 @@ df <- df %>%
 
 df <- df %>%
   select(tweet, final_label)
+
+df %>%
+  count(final_label)
 
 tweets = df$tweet
 
@@ -117,6 +122,94 @@ for (term in names(corr_filtered)) {
   }
 }
 
+# ---------- Tokens for YES and for NO separately -------------------------------------------------
+
+tweets_yes <- df$tweet[df$final_label == "YES"]
+tweets_no <- df$tweet[df$final_label == "NO"]
+
+clean_tweets <- function(tweets) {
+  tweets <- replace_html(tweets)
+  tweets <- gsub("@\\w+", "", tweets)
+  tweets <- gsub("http\\S+", "", tweets)
+  tweets <- gsub("\\.(\\S)", ". \\1", tweets, perl = TRUE)
+  return(tweets)
+}
+
+tweets_yes <- clean_tweets(tweets_yes)
+tweets_no <- clean_tweets(tweets_no)
+
+toks_yes <- tokens(tweets_yes, remove_punct = TRUE, remove_symbols = TRUE)
+toks_yes <- tokens_tolower(toks_yes)
+toks_yes <- tokens_remove(toks_yes, stopwords("english"))
+toks_yes <- tokens_remove(toks_yes, pattern = "^\\d+$", valuetype = "regex")
+toks_yes <- tokens_wordstem(toks_yes)
+
+toks_no <- tokens(tweets_no, remove_punct = TRUE, remove_symbols = TRUE)
+toks_no <- tokens_tolower(toks_no)
+toks_no <- tokens_remove(toks_no, stopwords("english"))
+toks_no <- tokens_remove(toks_no, pattern = "^\\d+$", valuetype = "regex")
+toks_no <- tokens_wordstem(toks_no)
+
+# ----------------------------------- Collocations YES -----------------------------------
+
+collocs_yes_2 <- textstat_collocations(toks_yes, size = 2, min_count = 5)
+top_collocs_yes_2 <- collocs_yes_2 %>% arrange(desc(count)) %>% head(25)
+
+collocs_yes_3 <- textstat_collocations(toks_yes, size = 3, min_count = 5)
+top_collocs_yes_3 <- collocs_yes_3 %>% arrange(desc(count)) %>% head(25)
+
+# ----------------------------------- Collocations NO -----------------------------------
+
+collocs_no_2 <- textstat_collocations(toks_no, size = 2, min_count = 5)
+top_collocs_no_2 <- collocs_no_2 %>% arrange(desc(count)) %>% head(25)
+
+collocs_no_3 <- textstat_collocations(toks_no, size = 3, min_count = 5)
+top_collocs_no_3 <- collocs_no_3 %>% arrange(desc(count)) %>% head(25)
+
+top_collocs_yes_2
+top_collocs_yes_3
+top_collocs_no_2
+top_collocs_no_3
+
+# ----------------------------------- Correlações Separadas YES e NO -----------------------------------
+
+# Criar dfm para cada classe
+dfm_yes <- dfm_subset(dfm, df$final_label == "YES")
+dfm_no <- dfm_subset(dfm, df$final_label == "NO")
+
+# Opcional: reduzir para palavras com frequência mínima
+dfm_yes_trim <- dfm_trim(dfm_yes, min_termfreq = 10)
+dfm_no_trim <- dfm_trim(dfm_no, min_termfreq = 10)
+
+# Calcular correlações
+correlations_yes <- textstat_simil(dfm_yes_trim, margin = "features", method = "correlation")
+correlations_no <- textstat_simil(dfm_no_trim, margin = "features", method = "correlation")
+
+# Filtrar para correlações > 0.8
+corr_list_yes <- as.list(correlations_yes)
+corr_list_no <- as.list(correlations_no)
+
+corr_filtered_yes <- lapply(corr_list_yes, function(x) x[x > 0.8])
+corr_filtered_no <- lapply(corr_list_no, function(x) x[x > 0.8])
+
+# Mostrar resultados para YES
+cat("\n=== Correlações em tweets YES ===\n")
+for (term in names(corr_filtered_yes)) {
+  correlated_terms <- names(corr_filtered_yes[[term]])
+  if (length(correlated_terms) > 0) {
+    cat("\nPalavra:", term, "\nCorrelacionadas:", paste(correlated_terms, collapse = ", "), "\n")
+  }
+}
+
+# Mostrar resultados para NO
+cat("\n=== Correlações em tweets NO ===\n")
+for (term in names(corr_filtered_no)) {
+  correlated_terms <- names(corr_filtered_no[[term]])
+  if (length(correlated_terms) > 0) {
+    cat("\nPalavra:", term, "\nCorrelacionadas:", paste(correlated_terms, collapse = ", "), "\n")
+  }
+}
+
 # ----------------------------------- Sentiment Analysis -----------------------------------
 
 tweets2 = df$tweet
@@ -128,6 +221,60 @@ emotions <- get_nrc_sentiment(tweets2)
 head(emotions)
 
 # ----------------------------------- Preparing a new data set for modeling -----------------------------------
+
+dfm_yes <- dfm_subset(dfm, df$final_label == "YES")
+dfm_no <- dfm_subset(dfm, df$final_label == "NO")
+
+# Top features
+top_yes <- topfeatures(dfm_yes, 15)
+top_no <- topfeatures(dfm_no, 15)
+top_yes
+top_no
+
+df_yes <- data.frame(word = names(top_yes), count = as.numeric(top_yes))
+df_yes <- df_yes %>%
+  arrange(desc(count))
+
+n_yes <- ndoc(dfm_yes)
+n_no <- ndoc(dfm_no)
+
+df_yes <- data.frame(word = names(top_yes), count = as.numeric(top_yes))
+df_yes <- df_yes %>%
+  mutate(relative_count = count / n_yes) %>%   # Dividir pela quantidade total de YES
+  arrange(desc(relative_count))
+
+# Gráfico para os tweets YES
+p_yes <- ggplot(df_yes, aes(x = reorder(word, -relative_count), y = relative_count, fill = "lightgreen")) +
+  geom_col() +
+  labs(
+    title = "Frequência relativa das top palavras em tweets YES",
+    x = "Palavra",
+    y = "Frequência Relativa"
+  ) +
+  scale_fill_manual(values = c("lightgreen")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# DataFrame para NO
+df_no <- data.frame(word = names(top_no), count = as.numeric(top_no))
+df_no <- df_no %>%
+  mutate(relative_count = count / n_no) %>%   # Dividir pela quantidade total de NO
+  arrange(desc(relative_count))
+
+# Gráfico para os tweets NO
+p_no <- ggplot(df_no, aes(x = reorder(word, -relative_count), y = relative_count, fill = "tomato")) +
+  geom_col() +
+  labs(
+    title = "Frequência relativa das top palavras em tweets NO",
+    x = "Palavra",
+    y = "Frequência Relativa"
+  ) +
+  scale_fill_manual(values = c("tomato")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Exibir os gráficos lado a lado
+grid.arrange(p_yes, p_no, ncol = 2)
 
 # Top 10 Features in columns as binary
 
@@ -221,5 +368,24 @@ df2 <- df2 %>%
 
 #write.csv(df2, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/df2.csv", row.names = FALSE)
 #write.csv(df2, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/df2_tfidf.csv", row.names = FALSE)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
