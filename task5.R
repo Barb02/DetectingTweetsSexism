@@ -190,36 +190,6 @@ common_tweets_count <- sapply(annotator_pairs, count_common_tweets)
 max_common_tweets <- max(common_tweets_count)
 max_common_tweets
 
-# -------------------------------------------------------------------------------------------------------------------
-# Creating Hybrid Model to mix the best models and prevent cold starts 
-# -------------------------------------------------------------------------------------------------------------------
-
-
-# -------------------------------------------------------------------------------------------------------------------
-# A fazer
-# -------------------------------------------------------------------------------------------------------------------
-
-# 1)
-# Creating Hybrid Model to mix the best models and prevent cold starts 
-
-# 2)
-# Arranjar scores para pôr na coluna
-
-# -------------------------------------------------------------------------------------------------------------------
-# Perguntas
-# -------------------------------------------------------------------------------------------------------------------
-
-# 1) 
-# Como é que o modelo vai funcionar se não há nem anotators (só 4) nem tweets (0) em comum?
-
-# 2)
-# As predictions não estão a dar nada mas o modelo ta a dar alguma coisa senao os RMSE nao seriam diferentes...
-
-# 3)
-# A coluna que criamos é com base nos prediction scores?
-
-# 4) 
-# Como é que me tá a dar valores de métricas mas depois a prever não dá nada 
 
 
 
