@@ -8,7 +8,9 @@ library(cluster)
 library(fpc)
 library(mclust)
 library(corrplot)
-library(reshape2) 
+library(reshape2)
+library(fastDummies)
+library(plotly)
 
 df = read_csv("/home/barbara/MDS/ATDS/DetectingTweetsSexism/tables/EXIST2025_train.csv")
 #df = read_csv("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/EXIST2025_train.csv")
@@ -24,7 +26,7 @@ annotator_summary <- df %>%
 
 annotator_summary
 
-boxplot(annotator_summary$total_labeled) # just oen that labeled just 11 tweets, all the rest labeled 57
+boxplot(annotator_summary$total_labeled) # some labeled just 11 tweets, all the rest labeled 57
 
 yes_rate_df = data.frame(yes_rate = annotator_summary$yes_rate)
 
@@ -79,6 +81,8 @@ res$ch # 1243.016
 
 # Dunn (separation/compactness ratio) - the higher the better (ubounded)
 res$dunn # 0.016
+
+# tested k = 4 and the only metric that was better than k = 5 was dunn
 
 # Stability
 
@@ -247,4 +251,109 @@ ggplot(annotator_summary, aes(x = cluster, fill = ethnicity)) +
 #   theme_minimal() 
 
 
-# TODO (?): cluster a partir do yes rate + demografia?
+
+
+############ Using other variables ########################
+
+df_clust <- annotator_summary[,2:7]
+
+df_clust <- df_clust[,c('age','yes_rate')]
+
+df_clust <- dummy_cols(df_clust, remove_selected_columns = TRUE)
+
+str(df_clust)
+
+df_clust <- scale(df_clust)
+
+sum(is.na(df_clust))
+
+# Elbow method
+fviz_nbclust(df_clust, kmeans, method = "wss", k.max=15) + 
+  theme_minimal() + 
+  ggtitle("Elbow Method")
+
+# Silhouette method
+fviz_nbclust(df_clust, kmeans, method = "silhouette", k.max=15) + 
+  theme_minimal() + 
+  ggtitle("Silhouette Method")
+
+k <- 3
+kmeans_result <- kmeans(df_clust, centers = k, nstart = 25)
+
+# evaluation and visualization
+
+fviz_cluster(kmeans_result, data = df_clust, geom = "point", ellipse.type = "convex") + 
+  theme_minimal() +
+  ggtitle(paste("K-means Clustering with K = ", k))
+
+res <- cluster.stats(dist(df_clust), kmeans_result$cluster)
+res
+
+res$ch
+res$avg.silwidth
+res$dunn
+res$within.cluster.ss
+
+pca <- prcomp(df_clust, scale. = TRUE)
+pca_data <- as.data.frame(pca$x[, 1:3]) 
+pca_data$cluster <- as.factor(kmeans_result$cluster)
+summary(pca)
+
+
+
+plot_ly(
+  data = pca_data, 
+  x = ~PC1, 
+  y = ~PC2, 
+  z = ~PC3, 
+  color = ~cluster, 
+  colors = "Set1", 
+  type = "scatter3d", 
+  mode = "markers"
+) %>% layout(title = "3D PCA Clustering")
+
+
+
+
+# columns for demographics: gender, age, ethnicity, education, country
+
+# 'yes_rate'                                k = 5     ch = 1243.016     silhouette = 0.56         dunn = 0.016      wss = 0.56
+# 'age','yes_rate'                          k = 3     ch = 533.7539     silhouette = 0.6613809    dunn = 0.5764527  wss = 339.014  visual = clean separation on 2D and 3D 
+# 'age', 'yes_rate', 'gender'               k = 6     ch = 352.8954     silhouette = 0.6459437    dunn = 0.5805406  wss = 338.026  visual = clean separation on 3D  
+# 'yes_rate', 'education'                   k = 6     ch = 421          silhouette = 0.6691562    dunn = 0.554855   wss = 339.0977  visual = clean on 3D
+# 'age','yes_rate', 'education'             k = 8     ch = 134.7966     silhouette = 0.5443515    dunn = 0.2699416  wss = 919.1509
+# 'age','yes_rate', 'education', 'gender'   k = 15(?) ch = 138.2857     silhouette = 0.5495702    dunn = 0.5065848  wss = 611.1114   
+# 'age','yes_rate', 'country'               k = 2(?)  ch = 20.87045     silhouette = 0.1227976    dunn = 0.1125445  wss = 12108.62 
+# 'country', 'yes_rate'                     no 'k' cant be found until k=15 by elbow method. using k = 12 chosen by silhouette -> bad results (ch = 16.31796, sil =  0.4780373, wss = 7689.906...)
+# 'yes_rate', 'gender'                      k = 5     ch = 948.6159     silhouette = 0.549411     dunn = 0.04347826 wss = 86.29997 visual = points along the same line but separated, whole variance explained by 2pcs
+# 'age','yes_rate', 'education', 'gender', 'ethnicity', 'country' k = 2(?) ch = 19  silhouette = 0.13 dunn = ... all bad. also with k = 15
+# 'yes_rate', 'ethnicity'                   k = 4     ch = 112.9379     silhouette = 0.68606     dunn = 0.1771895 wss = 1398.542  visual = overlapping on 2D and 3D (51% expl var on 3D)
+# 'yes_rate', 'ethnicity'                   k = 10 (elbow)   ch = 968.0862     silhouette = 0.5710186     dunn = 0.02631579 wss = 103.6693  visual = overlapping on 2D and 3D (51% expl var on 3D) (same)
+# 'age','yes_rate', 'ethnicity'             k = 13    ch = 320.1255    silhouette = 0.5489933     dunn = 0.02180598 wss = 306.1638
+
+
+# dunn and ch: good for braking the tie of silhouettes
+
+# Visualizing 'age', 'yes_rate'
+df_clust <- df_clust[,c('age', 'yes_rate')]
+df_clust <- dummy_cols(df_clust, remove_selected_columns = TRUE)
+df_clust <- scale(df_clust)
+k <- 6
+kmeans_result <- kmeans(df_clust, centers = k, nstart = 25)
+annotator_summary$cluster_multiple <- factor(kmeans_result$cluster)
+
+ggplot(annotator_summary, aes(x = cluster_multiple, fill = gender)) +
+  geom_bar(position = "fill") +
+  labs(title = "Age Composition by Cluster", y = "Proportion", x = "Cluster") +
+  theme_minimal()
+
+ggplot(annotator_summary, aes(x = yes_rate, fill = cluster_multiple)) +
+  geom_histogram(bins = 30) +
+  labs(title = "Annotators Clustered by Labeling Behavior", x = "Proportion of Sexist Labels", fill = "Cluster")
+
+# -> useless bc maps age 3 categories directly to the 3 clusters. same happens to 'age', 'yes_rate' and 'gender' (each age perfectly mapped for 2 clusters)
+# the same might happen with education since there is 6 cat and k = 6
+
+# better just to use yes rate clustering alone
+
+### FINAL: clustering by yes_rate, k = 5 using K-means
