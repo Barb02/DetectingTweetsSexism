@@ -5,10 +5,14 @@ library(rcompanion)
 library(rnaturalearth)
 library(rnaturalearthdata)
 library(sf)
+library(rpart)
+library(rpart.plot)
+library(scales)
 
-df = read_csv("/home/barbara/MDS/ATDS/DetectingTweetsSexism/tables/EXIST2025_train.csv")
+
+#df = read_csv("/home/barbara/MDS/ATDS/DetectingTweetsSexism/tables/EXIST2025_train.csv")
 #df = read_csv("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/EXIST2025_train.csv")
-#df = read_csv("C:/Users/marta/OneDrive/Documentos/FCUP/TACD/project/DetectingTweetsSexism/tables/EXIST2025_train.csv")
+df = read_csv("C:/Users/marta/OneDrive/Documentos/FCUP/TACD/project/DetectingTweetsSexism/tables/EXIST2025_train.csv")
 
 names(df)
 table(df$label_task1_1)
@@ -21,6 +25,45 @@ length(annotators)
 
 df_annotators <- df[!duplicated(df$annotator_id), ]
 dim(df_annotators)
+
+
+
+# Get total counts for NO and YES
+total_no <- sum(df$label_task1_1 == "NO")
+total_yes <- sum(df$label_task1_1 == "YES")
+
+
+
+# GENDER
+table_feature_label <- table(df$gender, df$label_task1_1)
+
+# Normalize counts by dividing by total NO and YES
+df_gender_label <- as.data.frame(table_feature_label) %>%
+  mutate(proportion = case_when(
+    df$label_task1_1 == "NO" ~ Freq / total_no,    # Explicitly reference label_task1_1
+    df$label_task1_1 == "YES" ~ Freq / total_yes   # Explicitly reference label_task1_1
+  ))
+
+# Plot normalized proportions for Gender
+ggplot(df_gender_label, aes(x = gender, y = proportion, fill = label_task1_1)) + 
+  geom_bar(stat = "identity", position = "dodge") +  # 'stat="identity"' to use the calculated proportions
+  theme_minimal() +
+  labs(
+    title = "Proportion of Labels by Gender",
+    x = "Gender", 
+    y = "Proportion",
+    fill = "Label"
+  ) +
+  scale_y_continuous(labels = scales::percent) +  # Scale y-axis as percentage
+  scale_fill_manual(values = c("YES" = "lightgreen", "NO" = "tomato"))
+
+
+
+
+
+
+
+
 
 
 # GENDER
@@ -257,3 +300,65 @@ ggplot(df, aes(x = country, fill = gender)) +
   ) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
   scale_fill_manual(values = c("F" = "lightgreen", "M" = "tomato"))
+
+
+# ------FEATURE IMPORTANCE---------
+df$label_task1_1 <- as.factor(df$label_task1_1)
+df$gender <- as.factor(df$gender)
+df$age <- as.factor(df$age)
+df$ethnicity <- as.factor(df$ethnicity)
+df$education <- as.factor(df$education)
+df$country <- as.factor(df$country)
+
+# Build a decision tree using annotator demographics
+tree_model <- rpart(label_task1_1 ~ gender + age + ethnicity + education + country,
+                    data = df,
+                    method = "class",
+                    control = rpart.control(cp = 0.002))  # cp = complexity parameter
+
+rpart.plot(tree_model, type = 2, extra = 104, fallen.leaves = TRUE,
+           main = "Decision Tree for Label Prediction")
+
+tree_model$variable.importance
+
+importance_df <- data.frame(
+  Feature = names(tree_model$variable.importance),
+  Importance = tree_model$variable.importance
+)
+
+ggplot(importance_df, aes(x = reorder(Feature, Importance), y = Importance)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +
+  labs(title = "Feature Importance from Decision Tree",
+       x = "Feature", y = "Importance") +
+  theme_minimal()
+
+importance <- tree_model$variable.importance
+importance / sum(importance) * 100  # % contribution
+
+# Compute relative importance
+importance <- tree_model$variable.importance
+importance_df <- data.frame(
+  Feature = names(importance),
+  Importance = importance / sum(importance) * 100
+)
+
+# Plot
+library(ggplot2)
+ggplot(importance_df, aes(x = reorder(Feature, Importance), y = Importance)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +
+  theme_minimal() +
+  labs(
+    title = "Relative Feature Importance",
+    x = "Feature",
+    y = "Importance (%)"
+  )
+
+
+plot_normalized_by_label_total(df, "gender")
+plot_normalized_by_label_total(df, "age")
+plot_normalized_by_label_total(df, "education")
+plot_normalized_by_label_total(df, "ethnicity")
+plot_normalized_by_label_total(df, "country")
+
