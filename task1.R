@@ -451,7 +451,7 @@ pattern_label_dist <- pattern_with_label %>%
 print(pattern_label_dist)
 
 # Considering both the correlation and the distribution across the labels we've decided to had the 
-# following features to our data set: positive to negative, all negative, all positive
+# following features to our data set: all negative and all positive
 
 # -------------------------------------------------------------------------------------------------------------------
 # Function used to create the features based on the conclusions taken from sentiment analysis Part 1
@@ -462,14 +462,6 @@ sent_seq <- function(data) {
   
   sentences_per_tweet <- lapply(data$tweet, get_sentences)
   sentiments_per_tweet <- lapply(sentences_per_tweet, get_sentiment, method = "syuzhet")
-  
-  data$pos_to_neg <- mapply(function(sentiments) {
-    if (length(sentiments) >= 2 && sign(sentiments[1]) == 1 && sign(sentiments[length(sentiments)]) == -1) {
-      return(1)
-    } else {
-      return(0)
-    }
-  }, sentiments_per_tweet)
   
   data$all_pos <- sapply(sentiments_per_tweet, function(sentiments) {
     if (length(sentiments) > 0 && all(sign(sentiments) == 1)) {
@@ -576,68 +568,7 @@ emotion_seq_dist_multi <- emotion_seq_df %>%
 
 print(emotion_seq_dist_multi)
 
-# Based on this, we've decided to implement emotion_sequence_anticipation-trust,
-# emotion_sequence_anticipation-disgust and emotion_sequence_anger-trust as binary features of our dataset
-
-# -------------------------------------------------------------------------------------------------------------------
-# Function used to create the features based on the conclusions taken from sentiment analysis Part 2
-# -------------------------------------------------------------------------------------------------------------------
-
-emotion <- function(df) {
-  emotion_cols <- c("anger", "anticipation", "disgust", "fear", "joy", 
-                    "sadness", "surprise", "trust", "positive", "negative")
-  
-  sentences_per_tweet <- lapply(df$tweet, get_sentences)
-  all_sentences <- unlist(sentences_per_tweet)
-  tweet_lengths <- sapply(sentences_per_tweet, length)
-  repeated_tweets <- rep(df$tweet, tweet_lengths)
-  
-  df_sentences <- data.frame(
-    tweet = repeated_tweets,
-    sentence = all_sentences,
-    stringsAsFactors = FALSE
-  )
-  
-  emotion_scores <- get_nrc_sentiment(df_sentences$sentence)
-  df_sentences <- cbind(df_sentences, emotion_scores)
-  
-  df_sentences_nonzero <- df_sentences %>%
-    filter(rowSums(select(., all_of(emotion_cols))) > 0)
-  
-  df_sentences_nonzero$dominant_emotion <- apply(
-    df_sentences_nonzero[, emotion_cols], 1, function(row) {
-      names(row)[which.max(row)]
-    }
-  )
-  
-  emotion_seq_df <- df_sentences_nonzero %>%
-    group_by(tweet) %>%
-    summarise(
-      emotion_sequence = paste(dominant_emotion, collapse = "-"),
-      n_sentences = n(),
-      .groups = "drop"
-    )
-  
-  df <- left_join(df, emotion_seq_df, by = "tweet")
-  df$n_sentences[is.na(df$n_sentences)] <- 0
-  
-  df$emotion_antictrust_angertrust <- ifelse(
-    is.na(df$emotion_sequence) | df$n_sentences == 1, 0,
-    ifelse(df$emotion_sequence %in% c("anticipation-trust", "anger-trust"), 1, 0)
-  )
-  
-  df$emotion_anticdisgust <- ifelse(
-    is.na(df$emotion_sequence) | df$n_sentences == 1, 0,
-    ifelse(df$emotion_sequence == "anticipation-disgust", 1, 0)
-  )
-  
-  df$emotion_sequence <- NULL
-  df$n_sentences <- NULL
-  
-  return(df)
-}
-
-df <- emotion(df)
+# Based on this, we've decided to not implement any of these in our data set since their occurrences are too low
 
 # -------------------------------------------------------------------------------------------------------------------
 # Sentiment Analysis - Checking if there are relevant statistic or general feature based on sentiment or emotions
@@ -690,7 +621,7 @@ df$final_label <- ifelse(df$final_label == "YES", 1, 0)
 # -- Correlation -- 
 
 dft <- df[, "final_label", drop = FALSE]
-dft <- cbind(dft, df[, 20:63])
+dft <- cbind(dft, df[, 17:60])
 
 cor_matrix <- cor(dft, use = "complete.obs")
 
