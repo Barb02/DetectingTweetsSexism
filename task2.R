@@ -14,6 +14,8 @@ library(rpart)
 library(rpart.plot)
 library(scales)
 library(tidyr)
+library(fastDummies)
+library(corrplot)
 
 # -------------------------------------------------------------------------------------------------------------------
 # Importing
@@ -278,6 +280,64 @@ ggplot(df_plot, aes(x = Var2, y = Freq, fill = Var1)) +
   ) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
   scale_fill_manual(values = c("F" = "pink", "M" = "lightblue"))
+
+# -------------------------------------------------------------------------------------------------------------------
+# Correlations
+# -------------------------------------------------------------------------------------------------------------------
+
+df_cor <- df[ , 5:10]
+
+df_cor$label_task1_1 <- ifelse(df_cor$label_task1_1 == "YES", 1, 0)
+
+df_dummies <- dummy_cols(df_cor[, 1:5], remove_selected_columns = TRUE)
+
+df_all  <- cbind(df_dummies, df_cor[ , !(names(df_cor) %in% names(df_cor[, 1:5]))])
+
+cor_matrix <- cor(df_all, use = "complete.obs")
+
+corrplot(cor_matrix,
+         method = "circle",
+         type = "upper",
+         tl.cex = 0.4,
+         tl.srt = 45,
+         cl.cex = 1.0,
+         title = "Correlation Matrix of Features",
+         mar = c(0, 0, 0, 0))
+
+cor_label <- cor_matrix[,"label_task1_1"]
+cor_label <- cor_label[!names(cor_label) %in% "label_task1_1"]
+cor_label <- cor_label[order(abs(cor_label), decreasing = TRUE)]
+
+print(cor_with_label)
+
+# -------------------------------------------------------------------------------------------------------------------
+# Distribution
+# -------------------------------------------------------------------------------------------------------------------
+
+df_all <- df_all %>% 
+  select(label_task1_1, everything())
+
+n_yes <- sum(df_all$label_task1_1 == 1)
+n_no  <- sum(df_all$label_task1_1 == 0)
+
+yes_counts <- colSums(df_all[df_all$label_task1_1 == 1, 2:52] >= 1)
+no_counts  <- colSums(df_all[df_all$label_task1_1 == 0, 2:52] >= 1)
+
+yes_prop <- yes_counts / n_yes
+no_prop  <- no_counts  / n_no
+
+result <- data.frame(
+  Column = names(df_all)[2:52],
+  Count_1 = yes_counts,
+  Proportion_1 = round(yes_prop, 3),
+  Count_0 = no_counts,
+  Proportion_0 = round(no_prop, 3)
+)
+
+result$Difference <- abs(result$Proportion_1 - result$Proportion_0)
+result <- result[order(-result$Difference), ]
+
+print(result)
 
 # -------------------------------------------------------------------------------------------------------------------
 # Feature Importance

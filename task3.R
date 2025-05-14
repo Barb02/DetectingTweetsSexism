@@ -1,3 +1,10 @@
+
+# Task 3: Clustering Annotators Based on Labeling Patterns
+
+# -------------------------------------------------------------------------------------------------------------------
+# Libraries
+# -------------------------------------------------------------------------------------------------------------------
+
 library(dplyr)
 library(readr)
 library(ggplot2)
@@ -11,6 +18,10 @@ library(corrplot)
 library(reshape2)
 library(fastDummies)
 library(plotly)
+
+# -------------------------------------------------------------------------------------------------------------------
+# Initial Analysis
+# -------------------------------------------------------------------------------------------------------------------
 
 #load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task1.RData")
 load("/home/barbara/MDS/ATDS/DetectingTweetsSexism/variables/df_after_task1.RData")
@@ -29,7 +40,9 @@ boxplot(annotator_summary$total_labeled)
 
 yes_rate_df = data.frame(yes_rate = annotator_summary$yes_rate)
 
-################################## K-means ################################## 
+# -------------------------------------------------------------------------------------------------------------------
+# K-means
+# -------------------------------------------------------------------------------------------------------------------
 
 # Elbow method
 fviz_nbclust(yes_rate_df, kmeans, method = "wss") + 
@@ -63,7 +76,9 @@ ggplot(annotator_summary, aes(x = yes_rate, fill = cluster)) +
 
 aggregate(yes_rate ~ cluster, data = annotator_summary, summary)
 
-############ Evaluation 
+# -------------------------------------------------------------------------------------------------------------------
+# Evaluation 
+# -------------------------------------------------------------------------------------------------------------------
 
 # Quality
 
@@ -115,9 +130,9 @@ ggplot(ari_df, aes(x = Run1, y = Run2, fill = ARI)) +
 # The ARI ranges from -1 to 1, where 1 indicates a perfect match between the clustering result and "ground truth".
 # Good stability
 
-
-####################### Hierarchical clustering #############################
-
+# -------------------------------------------------------------------------------------------------------------------
+# Hierarchical clustering
+# -------------------------------------------------------------------------------------------------------------------
 
 hc <- hclust(dist(yes_rate_df), method="ward.D")
 plot(hc, main = "Dendrogram of Hierarchical Clustering")
@@ -175,8 +190,9 @@ ggplot(annotator_summary, aes(x = yes_rate, fill = hc_cluster)) +
 
 aggregate(yes_rate ~ hc_cluster, data = annotator_summary, summary)
 
-
-##################### Comparison hierarchical with 2 x kmeans with 3 ############################
+# -------------------------------------------------------------------------------------------------------------------
+# Comparison hierarchical with 2 x kmeans with 3
+# -------------------------------------------------------------------------------------------------------------------
 
 # wss (compactness) - the lower the better
 res$within.cluster.ss
@@ -202,8 +218,9 @@ res_hc$dunn
 
 # Chosen: k-means
 
-
-##################### Relation with other variables (kmeans) #########################
+# -------------------------------------------------------------------------------------------------------------------
+# Relation with other variables (kmeans)
+# -------------------------------------------------------------------------------------------------------------------
 
 ggplot(annotator_summary, aes(x = cluster, fill = gender)) +
   geom_bar(position = "fill") +
@@ -233,9 +250,9 @@ ggplot(annotator_summary, aes(x = cluster, fill = ethnicity)) +
 #   theme_minimal() 
 
 
-
-
-############ Using other variables ########################
+# -------------------------------------------------------------------------------------------------------------------
+# Using other variables
+# -------------------------------------------------------------------------------------------------------------------
 
 df_clust <- annotator_summary[,2:7]
 
