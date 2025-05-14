@@ -19,9 +19,9 @@ library(tidyr)
 # Importing
 # -------------------------------------------------------------------------------------------------------------------
 
-df = read_csv("/home/barbara/MDS/ATDS/DetectingTweetsSexism/tables/EXIST2025_train.csv")
-#df = read_csv("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/EXIST2025_train.csv")
-#df = read_csv("C:/Users/marta/OneDrive/Documentos/FCUP/TACD/project/DetectingTweetsSexism/tables/EXIST2025_train.csv")
+# -- To have the df without the count YES = NO tweets
+load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task1.RData")
+df <- df <- df[ , 1:10]
 
 names(df)
 table(df$label_task1_1)

@@ -36,6 +36,7 @@ df = read_csv("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/Detecti
 
 # -- Cut the lines that have NAs which are the line that contain 
 #df <- na.omit(df)
+#df <- subset(df, select = -final_label)
 
 #save(df, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task1.RData")
 
