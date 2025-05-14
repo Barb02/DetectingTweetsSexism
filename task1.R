@@ -220,6 +220,11 @@ top_collocs_yes_3
 top_collocs_no_2
 top_collocs_no_3
 
+# -- Saving --
+#save(top_collocs_yes_2, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/top_collocs_yes_2.RData")
+#save(top_collocs_no_2, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/top_collocs_no_2.RData")
+
+
 # The collocations are clearly very different in YES and NO tweets so the idea is to create a binary feature
 # for each label with 0 if a tweet doesn't have one of the collocations and 1 if it has  
 
