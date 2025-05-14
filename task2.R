@@ -1,3 +1,10 @@
+
+# Task 2: Exploratory Analysis of Annotator Behavior
+
+# -------------------------------------------------------------------------------------------------------------------
+# Libraries
+# -------------------------------------------------------------------------------------------------------------------
+
 library(dplyr)
 library(readr)
 library(ggplot2)
@@ -7,6 +14,10 @@ library(rpart)
 library(rpart.plot)
 library(scales)
 library(tidyr)
+
+# -------------------------------------------------------------------------------------------------------------------
+# Importing
+# -------------------------------------------------------------------------------------------------------------------
 
 df = read_csv("/home/barbara/MDS/ATDS/DetectingTweetsSexism/tables/EXIST2025_train.csv")
 #df = read_csv("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/EXIST2025_train.csv")
@@ -18,8 +29,9 @@ table(df$label_task1_1)/dim(df)[1]
 
 # columns for demographics: gender, age, ethnicity, education, country
 
-
-# GENDER
+# -------------------------------------------------------------------------------------------------------------------
+# 1. Gender
+# -------------------------------------------------------------------------------------------------------------------
 
 unique(df$gender)
 
@@ -49,7 +61,9 @@ ggplot(df_plot, aes(x = Var1, y = Freq, fill = Var2)) +
 
 # If significant: see cramerV
 
-# AGE
+# -------------------------------------------------------------------------------------------------------------------
+# 2. Age
+# -------------------------------------------------------------------------------------------------------------------
 
 unique(df$age)
 
@@ -78,7 +92,9 @@ ggplot(df_plot, aes(x = Var1, y = Freq, fill = Var2)) +
   ) +
   scale_fill_manual(values = c("YES" = "lightgreen", "NO" = "tomato"))
 
-# AGE x GENDER
+# -------------------------------------------------------------------------------------------------------------------
+# 3. Age x Gender
+# -------------------------------------------------------------------------------------------------------------------
 
 df$age_gender <- interaction(df$age, df$gender)
 table_feature_label <- table(df$age_gender, df$label_task1_1)
@@ -101,8 +117,9 @@ ggplot(df_plot, aes(x = Var1, y = Freq, fill = Var2)) +
   ) +
   scale_fill_manual(values = c("YES" = "lightgreen", "NO" = "tomato"))
 
-
-# ETHNICITY
+# -------------------------------------------------------------------------------------------------------------------
+# 4. Ethnicity
+# -------------------------------------------------------------------------------------------------------------------
 
 unique(df$ethnicity)
 
@@ -126,8 +143,9 @@ ggplot(df_plot, aes(x = Var1, y = Freq, fill = Var2)) +
   ) +
   scale_fill_manual(values = c("YES" = "lightgreen", "NO" = "tomato"))
 
-
-# EDUCATION
+# -------------------------------------------------------------------------------------------------------------------
+# 5. Education
+# -------------------------------------------------------------------------------------------------------------------
 
 unique(df$education)
 
@@ -151,7 +169,9 @@ ggplot(df_plot, aes(x = Var1, y = Freq, fill = Var2)) +
   ) +
   scale_fill_manual(values = c("YES" = "lightgreen", "NO" = "tomato"))
 
-# COUNTRY
+# -------------------------------------------------------------------------------------------------------------------
+# 6. Country
+# -------------------------------------------------------------------------------------------------------------------
 
 unique(df$country)
 
@@ -176,8 +196,9 @@ ggplot(df_plot, aes(x = Var1, y = Freq, fill = Var2)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
   scale_fill_manual(values = c("YES" = "lightgreen", "NO" = "tomato"))
 
-
-# CONTINENT/REGION
+# -------------------------------------------------------------------------------------------------------------------
+# 7. Continent/Region
+# -------------------------------------------------------------------------------------------------------------------
 
 continent_map <- c('Algeria'= 'Middle East & North Africa',
   'Argentina'= 'Latin America & Caribbean',
@@ -237,8 +258,9 @@ ggplot(df_plot, aes(x = Var1, y = Freq, fill = Var2)) +
   scale_fill_manual(values = c("YES" = "lightgreen", "NO" = "tomato"))
 # country is better, region generalizes too much
 
-
-# COUNTRY ~ GENDER (see if the people from one country are women or men)
+# -------------------------------------------------------------------------------------------------------------------
+# 8. Country ~ Gender (see if the people from one country are women or men)
+# -------------------------------------------------------------------------------------------------------------------
 
 table_feature_label <- table(df$gender, df$country)
 table_feature_label
@@ -257,8 +279,9 @@ ggplot(df_plot, aes(x = Var2, y = Freq, fill = Var1)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
   scale_fill_manual(values = c("F" = "pink", "M" = "lightblue"))
 
-
-# ------FEATURE IMPORTANCE---------
+# -------------------------------------------------------------------------------------------------------------------
+# Feature Importance
+# -------------------------------------------------------------------------------------------------------------------
 
 library(randomForest)
 
@@ -267,5 +290,31 @@ df$label_task1_1 <- as.factor(df$label_task1_1)
 model <- randomForest(label_task1_1 ~ age + gender + country + ethnicity + education, data = df, importance = TRUE)
 importance(model)
 varImpPlot(model, main = "Feature Importance - Random Forest")
+
+# -------------------------------------------------------------------------------------------------------------------
+# Conclusions from Task 2 
+# -------------------------------------------------------------------------------------------------------------------
+
+# Here is what we took from: 
+
+# 1. Gender ->
+
+# 2. Age ->
+
+# 3. Age x Gender ->
+
+# 4. Ethnicity ->
+
+# 5. Education ->
+
+# 6. Country ->
+
+# 7. Continent/Region ->
+
+# 8. Country ~ Gender ->
+
+
+
+
 
 
