@@ -308,7 +308,7 @@ cor_label <- cor_matrix[,"label_task1_1"]
 cor_label <- cor_label[!names(cor_label) %in% "label_task1_1"]
 cor_label <- cor_label[order(abs(cor_label), decreasing = TRUE)]
 
-print(cor_with_label)
+print(cor_label)
 
 # -------------------------------------------------------------------------------------------------------------------
 # Distribution
@@ -339,6 +339,22 @@ result <- result[order(-result$Difference), ]
 
 print(result)
 
+
+# -------------------------------------------------------------------------------------------------------------------
+# Logistic Regression
+# -------------------------------------------------------------------------------------------------------------------
+
+# df_cor$continent <- continent_map[df_cor$country]
+
+# df_cor <- df_cor[, !(names(df_cor) %in% c("country"))]
+
+model_logit <- glm(label_task1_1 ~ ., data = df_cor, family = binomial)
+summary(model_logit)
+
+model_logit <- glm(label_task1_1 ~ ., data = df_cor, family = binomial)
+
+summary(model_logit)
+
 # -------------------------------------------------------------------------------------------------------------------
 # Feature Importance
 # -------------------------------------------------------------------------------------------------------------------
@@ -357,19 +373,20 @@ varImpPlot(model, main = "Feature Importance - Random Forest")
 
 # Here is what we took from: 
 
-# 1. Gender ->
+# 1. Gender -> Not significant 
 
-# 2. Age ->
+# 2. Age -> age23-45 , age46+
 
-# 3. Age x Gender ->
+# 3. Age x Gender -> ?
 
-# 4. Ethnicity ->
+# 4. Ethnicity -> ethnicityMiddle Eastern, ethnicityother
 
-# 5. Education ->
+# 5. Education -> educationHigh school degree or equivalent, educationLess than high school diploma, 
+# educationMaster’s degree, 
 
-# 6. Country ->
+# 6. Country -> all but Cyprus
 
-# 7. Continent/Region ->
+# 7. Continent/Region -> 
 
 # 8. Country ~ Gender ->
 
