@@ -18,6 +18,7 @@ library(stringr)
 library(tidyverse)
 library(gridExtra)
 library(corrplot)
+library(purrr)
 
 # -------------------------------------------------------------------------------------------------------------------
 # Initial Analysis
@@ -618,6 +619,27 @@ df <- left_join(df, df[, c("tweet", "tweet_sentiment")], by = "tweet")
 
 df$final_label <- ifelse(df$final_label == "YES", 1, 0)
 
+# -- Check distribution between YES and NO --
+
+n_yes <- sum(df$final_label == 1)
+n_no  <- sum(df$final_label == 0)
+
+yes_counts <- colSums(df[df$final_label == 1, 17:26] >= 1)
+no_counts  <- colSums(df[df$final_label == 0, 17:26] >= 1)
+
+yes_prop <- yes_counts / n_yes
+no_prop  <- no_counts  / n_no
+
+result <- data.frame(
+  Column = names(df)[17:26],
+  Count_1 = yes_counts,
+  Proportion_1 = round(yes_prop, 3),
+  Count_0 = no_counts,
+  Proportion_0 = round(no_prop, 3)
+)
+
+print(result)
+
 # -- Correlation -- 
 
 dft <- df[, "final_label", drop = FALSE]
@@ -648,7 +670,7 @@ corrplot(cor_matrix,
 # We've decided to have columns for the: sent_min, tweet_sentiment, disgust_max and sadness
 
 # -------------------------------------------------------------------------------------------------------------------
-# Function used to create the features based on the conclusions taken from sentiment analysis Part 3
+# Function used to create the features based on the conclusions taken from sentiment analysis Part 2
 # -------------------------------------------------------------------------------------------------------------------
 
 stats_emot_sent <- function(df) {
@@ -691,13 +713,79 @@ stats_emot_sent <- function(df) {
 df_final <- stats_emot_sent(df_final)
 
 # -------------------------------------------------------------------------------------------------------------------
+# Sentiment Analysis - Checking if there are relevant start or finish emotion
+# -------------------------------------------------------------------------------------------------------------------
+
+# In this segment we will create a data set with binary features that for each emotion are 1 if it is in the first non
+# neutral sentence and 0 if not and the same thing for the last non neutral sentence
+
+emotion_cols <- c("anger", "anticipation", "disgust", "fear", "joy", "sadness", 
+                  "surprise", "trust", "negative", "positive")
+
+
+process_tweet <- function(tweet_data) {
+  
+  tweet_data[emotion_cols] <- tweet_data[emotion_cols] >= 1
+  
+  non_neutral <- tweet_data %>% filter(sentiment_sign != 0)
+  
+  if (nrow(non_neutral) == 0) {
+    return(setNames(rep(0, length(emotion_cols) * 2),
+                    c(paste0("start_", emotion_cols), paste0("end_", emotion_cols))))
+  }
+  
+  first_row <- non_neutral[1, ]
+  last_row  <- non_neutral[nrow(non_neutral), ]
+  
+  start_vec <- as.integer(sapply(emotion_cols, function(col) first_row[[col]]))
+  end_vec   <- as.integer(sapply(emotion_cols, function(col) last_row[[col]]))
+  
+  names(start_vec) <- paste0("start_", emotion_cols)
+  names(end_vec)   <- paste0("end_", emotion_cols)
+  
+  return(c(start_vec, end_vec))
+}
+
+df_emotions <- df_sentences %>%
+  group_by(tweet) %>%  
+  group_modify(~as.data.frame(t(process_tweet(.x)))) %>%
+  ungroup()
+
+df_emotions <- df_emotions %>%
+  left_join(df %>%
+              select(tweet, final_label), by = "tweet")
+
+n_yes <- sum(df_emotions$final_label == 1)
+n_no  <- sum(df_emotions$final_label == 0)
+
+yes_counts <- colSums(df_emotions[df_emotions$final_label == 1, 2:21] >= 1)
+no_counts  <- colSums(df_emotions[df_emotions$final_label == 0, 2:21] >= 1)
+
+yes_prop <- yes_counts / n_yes
+no_prop  <- no_counts  / n_no
+
+result <- data.frame(
+  Column = names(df_emotions)[2:21],
+  Count_1 = yes_counts,
+  Proportion_1 = round(yes_prop, 3),
+  Count_0 = no_counts,
+  Proportion_0 = round(no_prop, 3)
+)
+
+# -- Difference -- 
+result$Difference <- abs(result$Proportion_1 - result$Proportion_0)
+
+print(result)
+
+# The results show that the most significant differences between proportions in YES and NO tweets are the sadness
+# and disgust but we already have features regarding those emotions so we decided not to had anything 
+# to avoid redundancy
+
+# -------------------------------------------------------------------------------------------------------------------
 # Exporting the data set to model in Python
 # -------------------------------------------------------------------------------------------------------------------
 
 write.csv(df_final, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/task1.csv", row.names = FALSE)
-
-
-
 
 
 
