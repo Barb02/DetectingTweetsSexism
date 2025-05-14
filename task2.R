@@ -23,7 +23,9 @@ library(corrplot)
 
 # -- To have the df without the count YES = NO tweets
 load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task1.RData")
-df <- df <- df[ , 1:10]
+load("/home/barbara/MDS/ATDS/DetectingTweetsSexism/variables/df_after_task1.RData")
+
+df <- df[ , 1:10]
 
 names(df)
 table(df$label_task1_1)
@@ -281,34 +283,6 @@ ggplot(df_plot, aes(x = Var2, y = Freq, fill = Var1)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
   scale_fill_manual(values = c("F" = "pink", "M" = "lightblue"))
 
-# -------------------------------------------------------------------------------------------------------------------
-# Correlations
-# -------------------------------------------------------------------------------------------------------------------
-
-df_cor <- df[ , 5:10]
-
-df_cor$label_task1_1 <- ifelse(df_cor$label_task1_1 == "YES", 1, 0)
-
-df_dummies <- dummy_cols(df_cor[, 1:5], remove_selected_columns = TRUE)
-
-df_all  <- cbind(df_dummies, df_cor[ , !(names(df_cor) %in% names(df_cor[, 1:5]))])
-
-cor_matrix <- cor(df_all, use = "complete.obs")
-
-corrplot(cor_matrix,
-         method = "circle",
-         type = "upper",
-         tl.cex = 0.4,
-         tl.srt = 45,
-         cl.cex = 1.0,
-         title = "Correlation Matrix of Features",
-         mar = c(0, 0, 0, 0))
-
-cor_label <- cor_matrix[,"label_task1_1"]
-cor_label <- cor_label[!names(cor_label) %in% "label_task1_1"]
-cor_label <- cor_label[order(abs(cor_label), decreasing = TRUE)]
-
-print(cor_label)
 
 # -------------------------------------------------------------------------------------------------------------------
 # Distribution
@@ -339,33 +313,57 @@ result <- result[order(-result$Difference), ]
 
 print(result)
 
+# -------------------------------------------------------------------------------------------------------------------
+# Correlation
+# -------------------------------------------------------------------------------------------------------------------
+
+df_cor <- df[ , 5:10]
+
+df_cor$label_task1_1 <- ifelse(df_cor$label_task1_1 == "YES", 1, 0)
+
+df_dummies <- dummy_cols(df_cor[, 1:5], remove_selected_columns = TRUE)
+
+df_all  <- cbind(df_dummies, df_cor[ , !(names(df_cor) %in% names(df_cor[, 1:5]))])
+
+cor_matrix <- cor(df_all, use = "complete.obs")
+
+corrplot(cor_matrix,
+         method = "circle",
+         type = "upper",
+         tl.cex = 0.4,
+         tl.srt = 45,
+         cl.cex = 1.0,
+         title = "Correlation Matrix of Features",
+         mar = c(0, 0, 0, 0))
+
+cor_label <- cor_matrix[,"label_task1_1"]
+cor_label <- cor_label[!names(cor_label) %in% "label_task1_1"]
+cor_label <- cor_label[order(abs(cor_label), decreasing = TRUE)]
+print(cor_label)
 
 # -------------------------------------------------------------------------------------------------------------------
 # Logistic Regression
 # -------------------------------------------------------------------------------------------------------------------
 
+df_cor <- df[ , 5:10]
+
+df_cor$label_task1_1 <- ifelse(df_cor$label_task1_1 == "YES", 1, 0)
+
 # df_cor$continent <- continent_map[df_cor$country]
 
 # df_cor <- df_cor[, !(names(df_cor) %in% c("country"))]
+df_cor$country <- factor(df_cor$country) 
+df_cor$education <- factor(df_cor$education)
+df_cor$ethnicity <- factor(df_cor$ethnicity)
+df_cor$country <- relevel(df_cor$country, ref = "Nepal")
+df_cor$education <- relevel(df_cor$education, ref = "Less than high school diploma")
+df_cor$ethnicity <- relevel(df_cor$ethnicity, ref = "White or Caucasian")
 
 model_logit <- glm(label_task1_1 ~ ., data = df_cor, family = binomial)
 summary(model_logit)
 
-model_logit <- glm(label_task1_1 ~ ., data = df_cor, family = binomial)
-
+model_logit <- glm(label_task1_1 ~ . + age * gender + country * gender, data = df_cor, family = binomial)
 summary(model_logit)
-
-# -------------------------------------------------------------------------------------------------------------------
-# Feature Importance
-# -------------------------------------------------------------------------------------------------------------------
-
-library(randomForest)
-
-df$label_task1_1 <- as.factor(df$label_task1_1)
-
-model <- randomForest(label_task1_1 ~ age + gender + country + ethnicity + education, data = df, importance = TRUE)
-importance(model)
-varImpPlot(model, main = "Feature Importance - Random Forest")
 
 # -------------------------------------------------------------------------------------------------------------------
 # Conclusions from Task 2 
@@ -373,22 +371,16 @@ varImpPlot(model, main = "Feature Importance - Random Forest")
 
 # Here is what we took from: 
 
-# 1. Gender -> Not significant 
+# 1. Gender -> Not significant but might be important for interactions (ex: age x gender)
 
 # 2. Age -> age23-45 , age46+
 
-# 3. Age x Gender -> ?
+# 4. Ethnicity -> ethnicityMiddle Eastern, ethnicityother, ethnicityMultiracial, ethnicityBlack or African American
 
-# 4. Ethnicity -> ethnicityMiddle Eastern, ethnicityother
+# 5. Education -> educationBachelor’s degree, educationDoctorate
 
-# 5. Education -> educationHigh school degree or equivalent, educationLess than high school diploma, 
-# educationMaster’s degree, 
+# 6. Country -> Algeria, Canada, Cyprus, Ireland, Israel
 
-# 6. Country -> all but Cyprus
-
-# 7. Continent/Region -> 
-
-# 8. Country ~ Gender ->
 
 
 
