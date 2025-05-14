@@ -1,10 +1,3 @@
-
-# Task 3: Clustering Annotators Based on Labeling Patterns
-
-# -------------------------------------------------------------------------------------------------------------------
-# Libraries
-# -------------------------------------------------------------------------------------------------------------------
-
 library(dplyr)
 library(readr)
 library(ggplot2)
@@ -19,13 +12,9 @@ library(reshape2)
 library(fastDummies)
 library(plotly)
 
-# -------------------------------------------------------------------------------------------------------------------
-# Initial Analysis
-# -------------------------------------------------------------------------------------------------------------------
-
-# -- To have the df without the count YES = NO tweets
-load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task1.RData")
-df <- df <- df[ , 1:10]
+#load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task1.RData")
+load("/home/barbara/MDS/ATDS/DetectingTweetsSexism/variables/df_after_task1.RData")
+names(df)
 
 annotator_summary <- df %>%
   group_by(annotator_id, gender, age, country, ethnicity, education) %>%
@@ -40,9 +29,7 @@ boxplot(annotator_summary$total_labeled) # some labeled just 11 tweets, all the 
 
 yes_rate_df = data.frame(yes_rate = annotator_summary$yes_rate)
 
-# -------------------------------------------------------------------------------------------------------------------
-# K-means
-# -------------------------------------------------------------------------------------------------------------------
+################################## K-means ################################## 
 
 # Elbow method
 fviz_nbclust(yes_rate_df, kmeans, method = "wss") + 
@@ -76,9 +63,7 @@ ggplot(annotator_summary, aes(x = yes_rate, fill = cluster)) +
 
 aggregate(yes_rate ~ cluster, data = annotator_summary, summary)
 
-# -------------------------------------------------------------------------------------------------------------------
-# Evaluation 
-# -------------------------------------------------------------------------------------------------------------------
+############ Evaluation 
 
 # Quality
 
@@ -130,9 +115,9 @@ ggplot(ari_df, aes(x = Run1, y = Run2, fill = ARI)) +
 # The ARI ranges from -1 to 1, where 1 indicates a perfect match between the clustering result and "ground truth".
 # Good stability
 
-# -------------------------------------------------------------------------------------------------------------------
-# Hierarchical clustering 
-# -------------------------------------------------------------------------------------------------------------------
+
+####################### Hierarchical clustering #############################
+
 
 hc <- hclust(dist(yes_rate_df), method="ward.D")
 plot(hc, main = "Dendrogram of Hierarchical Clustering")
@@ -207,9 +192,8 @@ ggplot(annotator_summary, aes(x = yes_rate, fill = hc_cluster)) +
 
 aggregate(yes_rate ~ hc_cluster, data = annotator_summary, summary)
 
-# -------------------------------------------------------------------------------------------------------------------
-# Comparison hierarchical with 4 x kmeans with 5
-# -------------------------------------------------------------------------------------------------------------------
+
+##################### Comparison hierarchical with 4 x kmeans with 5 ############################
 
 # wss (compactness) - the lower the better
 res$within.cluster.ss
@@ -235,9 +219,8 @@ res4$dunn
 
 # Chosen: k-means
 
-# -------------------------------------------------------------------------------------------------------------------
-# Relation with other variables (kmeans)
-# -------------------------------------------------------------------------------------------------------------------
+
+##################### Relation with other variables (kmeans) #########################
 
 ggplot(annotator_summary, aes(x = cluster, fill = gender)) +
   geom_bar(position = "fill") +
@@ -266,9 +249,10 @@ ggplot(annotator_summary, aes(x = cluster, fill = ethnicity)) +
 #   labs(title = "Country Composition by Cluster", y = "Proportion", x = "Cluster") +
 #   theme_minimal() 
 
-# -------------------------------------------------------------------------------------------------------------------
-# Using other variables
-# -------------------------------------------------------------------------------------------------------------------
+
+
+
+############ Using other variables ########################
 
 df_clust <- annotator_summary[,2:7]
 
@@ -315,6 +299,7 @@ pca_data$cluster <- as.factor(kmeans_result$cluster)
 summary(pca)
 
 
+
 plot_ly(
   data = pca_data, 
   x = ~PC1, 
@@ -325,6 +310,8 @@ plot_ly(
   type = "scatter3d", 
   mode = "markers"
 ) %>% layout(title = "3D PCA Clustering")
+
+
 
 
 # columns for demographics: gender, age, ethnicity, education, country
