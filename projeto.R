@@ -37,6 +37,9 @@ df = read_csv("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/Detecti
 # -- Cut the lines that have NAs which are the line that contain 
 #df <- na.omit(df)
 #df <- subset(df, select = -final_label)
+#names(df)[names(df) == "gender.x"] <- "gender"
+#names(df)[11:20] <- paste0("word_", names(df)[11:20])
+#names(df)[names(df) == "word_gender.y"] <- "word_gender"
 
 #save(df, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task1.RData")
 
