@@ -5,10 +5,11 @@
 # Importing
 # -------------------------------------------------------------------------------------------------------------------
 
+library(fastDummies)
 source("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/functions.R")
 
 #df = read_csv("/home/barbara/MDS/ATDS/DetectingTweetsSexism/tables/EXIST2025_train.csv")
-df = read_csv("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/EXIST2025_train.csv")
+#df = read_csv("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/EXIST2025_train.csv")
 #df = read_csv("C:/Users/marta/OneDrive/Documentos/FCUP/TACD/project/DetectingTweetsSexism/tables/EXIST2025_train.csv")
 
 # -------------------------------------------------------------------------------------------------------------------
@@ -49,11 +50,23 @@ load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsS
 # Task 2
 # -------------------------------------------------------------------------------------------------------------------
 
+df_dummies <- dummy_cols(df[, 5:9], remove_selected_columns = TRUE)
+df_dummies <- df_dummies[, c("gender_F", "age_18-22", "ethnicity_Middle Eastern", "ethnicity_other", 
+                             "ethnicity_Multiracial", "ethnicity_Black or African American", "education_Bachelor’s degree",
+                             "education_Doctorate","country_Algeria", "country_Canada", "country_Cyprus", 
+                             "country_Ireland", "country_Israel")]
+df <- cbind(df, df_dummies)
+df <- df[, -c(1:9)]
+
 
 # -------------------------------------------------------------------------------------------------------------------
 # Task 3
 # -------------------------------------------------------------------------------------------------------------------
 
+
+#save(df, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task_2_3.RData")
+
+#load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task_2_3.RData")
 
 # -------------------------------------------------------------------------------------------------------------------
 # Task 4
