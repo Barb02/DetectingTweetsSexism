@@ -61,6 +61,8 @@ fviz_nbclust(yes_rate_df, kmeans, method = "silhouette") +
 kmeans_result <- kmeans(yes_rate_df, centers = 3, nstart = 25)
 annotator_summary$cluster <- factor(kmeans_result$cluster)
 
+#save(kmeans_result, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/kmeans_model.RData")
+
 cluster_order <- annotator_summary %>%
   group_by(cluster) %>%
   summarize(max_rate = max(yes_rate)) %>%

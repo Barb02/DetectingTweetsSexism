@@ -58,11 +58,20 @@ df_dummies <- df_dummies[, c("gender_F", "age_18-22", "ethnicity_Middle Eastern"
 df <- cbind(df, df_dummies)
 df <- df[, -c(1:9)]
 
-
 # -------------------------------------------------------------------------------------------------------------------
 # Task 3
 # -------------------------------------------------------------------------------------------------------------------
 
+load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/kmeans_model.RData")
+
+annotator_summary <- df %>%
+  group_by(annotator_id, gender, age, country, ethnicity, education) %>%
+  summarise(
+    yes_rate = mean(label_task1_1 == "YES"),
+    total_labeled = n()
+  )
+
+annotator_summary$cluster <- sapply(annotator_summary$yes_rate, assign_cluster, centers = kmeans_result$centers)
 
 #save(df, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task_2_3.RData")
 

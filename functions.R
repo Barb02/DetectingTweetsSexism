@@ -137,3 +137,12 @@ stats_emot_sent <- function(df) {
   
   return(df_final)
 }
+
+# -------------------------------------------------------------------------------------------------------------------
+# Function to assign a cluster according to the yes rate
+# -------------------------------------------------------------------------------------------------------------------
+
+assign_cluster <- function(rate, centers) {
+  dists <- (rate - centers)^2
+  which.min(dists)
+}
