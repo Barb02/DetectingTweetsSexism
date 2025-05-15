@@ -1,3 +1,10 @@
+
+# Task 3: Clustering Annotators Based on Labeling Patterns
+
+# -------------------------------------------------------------------------------------------------------------------
+# Libraries
+# -------------------------------------------------------------------------------------------------------------------
+
 library(dplyr)
 library(readr)
 library(ggplot2)
@@ -12,10 +19,13 @@ library(reshape2)
 library(fastDummies)
 library(plotly)
 
-df = read_csv("/home/barbara/MDS/ATDS/DetectingTweetsSexism/tables/EXIST2025_train.csv")
-#df = read_csv("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/EXIST2025_train.csv")
-#df = read_csv("C:/Users/marta/OneDrive/Documentos/FCUP/TACD/project/DetectingTweetsSexism/tables/EXIST2025_train.csv")
+# -------------------------------------------------------------------------------------------------------------------
+# Initial Analysis
+# -------------------------------------------------------------------------------------------------------------------
 
+load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task1.RData")
+#load("/home/barbara/MDS/ATDS/DetectingTweetsSexism/variables/df_after_task1.RData")
+names(df)
 
 annotator_summary <- df %>%
   group_by(annotator_id, gender, age, country, ethnicity, education) %>%
@@ -26,27 +36,29 @@ annotator_summary <- df %>%
 
 annotator_summary
 
-boxplot(annotator_summary$total_labeled) # some labeled just 11 tweets, all the rest labeled 57
+boxplot(annotator_summary$total_labeled)
 
 yes_rate_df = data.frame(yes_rate = annotator_summary$yes_rate)
 
-################################## K-means ################################## 
+# -------------------------------------------------------------------------------------------------------------------
+# K-means
+# -------------------------------------------------------------------------------------------------------------------
 
 # Elbow method
 fviz_nbclust(yes_rate_df, kmeans, method = "wss") + 
   theme_minimal() + 
   ggtitle("Elbow Method")
-# k = 5
+# k = 3
 
 # Silhouette method
 fviz_nbclust(yes_rate_df, kmeans, method = "silhouette") + 
   theme_minimal() + 
   ggtitle("Silhouette Method")
-# K = 2,5,6
+# K = 2
 
-# Chosen: K = 5
+# Chosen: K = 3, aligns better with our needs
 
-kmeans_result <- kmeans(yes_rate_df, centers = 5, nstart = 25)
+kmeans_result <- kmeans(yes_rate_df, centers = 3, nstart = 25)
 annotator_summary$cluster <- factor(kmeans_result$cluster)
 
 cluster_order <- annotator_summary %>%
@@ -64,35 +76,37 @@ ggplot(annotator_summary, aes(x = yes_rate, fill = cluster)) +
 
 aggregate(yes_rate ~ cluster, data = annotator_summary, summary)
 
-############ Evaluation 
+# -------------------------------------------------------------------------------------------------------------------
+# Evaluation 
+# -------------------------------------------------------------------------------------------------------------------
 
 # Quality
 
 res <- cluster.stats(dist(yes_rate_df), kmeans_result$cluster)
 
-res$within.cluster.ss # 0.56. the lower the better (unbounded)
+res$within.cluster.ss # 1.420638 the lower the better (unbounded)
 
 res$avg.silwidth
-# silhouette score = mean = 0.56 -> good clustering, well-separated clusters with high cohesion
+# silhouette score = mean = 0.5423015 -> good clustering, well-separated clusters with high cohesion
 # Range: -1 to 1
 
 # Calinski-Harabasz (variance ratio) - the higher the better (unbounded)
-res$ch # 1243.016 
+res$ch # 847.3658 
 
 # Dunn (separation/compactness ratio) - the higher the better (ubounded)
 res$dunn # 0.016
 
-# tested k = 4 and the only metric that was better than k = 5 was dunn
+# with k = 2 only silhouette is slightly better, therefore k = 3 is better overall
 
 # Stability
 
-results <- replicate(10, kmeans(yes_rate_df, centers = 5, nstart = 25)$cluster)
+results <- replicate(50, kmeans(yes_rate_df, centers = 3, nstart = 1)$cluster)
 results
 
-ari_matrix <- matrix(NA, ncol = 10, nrow = 10)
+ari_matrix <- matrix(NA, ncol = 50, nrow = 50)
 
-for (i in 1:10) {
-  for (j in 1:10) {
+for (i in 1:50) {
+  for (j in 1:50) {
     ari_matrix[i, j] <- adjustedRandIndex(results[, i], results[, j])
   }
 }
@@ -116,9 +130,9 @@ ggplot(ari_df, aes(x = Run1, y = Run2, fill = ARI)) +
 # The ARI ranges from -1 to 1, where 1 indicates a perfect match between the clustering result and "ground truth".
 # Good stability
 
-
-####################### Hierarchical clustering #############################
-
+# -------------------------------------------------------------------------------------------------------------------
+# Hierarchical clustering
+# -------------------------------------------------------------------------------------------------------------------
 
 hc <- hclust(dist(yes_rate_df), method="ward.D")
 plot(hc, main = "Dendrogram of Hierarchical Clustering")
@@ -129,35 +143,19 @@ sil_widths <- sapply(2:10, function(k) {
 })
 plot(2:10, sil_widths, type = "b", xlab = "Number of clusters", ylab = "Avg Silhouette Width")
 
-abline(h = 5, col = "red", lty = 2) # 4 clusters
-abline(h = 10, col = "green", lty = 2) # 2 clusters
-clusters_4 <- cutree(hc, k = 4)
+plot(hc, main = "Dendrogram of Hierarchical Clustering")
+abline(h = 1.2, col = "red", lty = 2) # 8 clusters
+abline(h = 12, col = "green", lty = 2) # 2 clusters
+# 8 is too big for our problem
+# Choosen: 2
+
 clusters_2 <- cutree(hc, k = 2)
 
-res2 <- cluster.stats(dist(yes_rate_df), clusters_2)
-res4 <- cluster.stats(dist(yes_rate_df), clusters_4)
-
-# wss (compactness) - the lower the better
-res2$within.cluster.ss
-res4$within.cluster.ss
-# 4 wins
-
-# silhouette - the higher the better
-res2$avg.silwidth
-res4$avg.silwidth
-# 2 wins
-
-# Calinski-Harabasz (variance ratio) - the higher the better
-res2$ch
-res4$ch
-# 4 wins
-
-# Dunn (separation/compactness ratio) - the higher the better
-res2$dunn
-res4$dunn
-# 4 wins
-
-# Choosen: 4
+res_hc <- cluster.stats(dist(yes_rate_df), clusters_2)
+res_hc$within.cluster.ss
+res_hc$avg.silwidth
+res_hc$ch  
+res_hc$dunn
 
 # Stability
 
@@ -165,18 +163,17 @@ clusterboot_result <- clusterboot(
   dist(yes_rate_df), 
   clustermethod = disthclustCBI,
   method = "ward.D", 
-  k = 4,
+  k = 2,
   B = 100
 )
 
 clusterboot_result$bootmean # mean Jaccard stability 
-# 0.7500108 (moderately stable) 0.7485142 (moderately stable)  0.6632456  (borderline/moderately stable) 0.9015975 (highly stable)
+# 0.6815410 (borderline/moderately stable) 0.7446272 (moderately stable)
 # source: https://www.rdocumentation.org/packages/fpc/versions/2.2-13/topics/clusterboot on "Details"
 
 # Visualization
 
-clusters_4
-annotator_summary$hc_cluster <- factor(clusters_4)
+annotator_summary$hc_cluster <- factor(clusters_2)
 
 cluster_order_hc <- annotator_summary %>%
   group_by(hc_cluster) %>%
@@ -193,35 +190,37 @@ ggplot(annotator_summary, aes(x = yes_rate, fill = hc_cluster)) +
 
 aggregate(yes_rate ~ hc_cluster, data = annotator_summary, summary)
 
-
-##################### Comparison hierarchical with 4 x kmeans with 5 ############################
+# -------------------------------------------------------------------------------------------------------------------
+# Comparison hierarchical with 2 x kmeans with 3
+# -------------------------------------------------------------------------------------------------------------------
 
 # wss (compactness) - the lower the better
 res$within.cluster.ss
-res4$within.cluster.ss
+res_hc$within.cluster.ss
 # kmeans wins
 
 # silhouette - the higher the better
 res$avg.silwidth
-res4$avg.silwidth
+res_hc$avg.silwidth
 # kmeans wins
 
 # Calinski-Harabasz (variance ratio) - the higher the better
 res$ch
-res4$ch
+res_hc$ch
 # kmeans wins
 
 # Dunn (separation/compactness ratio) - the higher the better
 res$dunn
-res4$dunn
-# hc wins
+res_hc$dunn
+# kmeans wins
 
 # Stability: kmeans wins
 
 # Chosen: k-means
 
-
-##################### Relation with other variables (kmeans) #########################
+# -------------------------------------------------------------------------------------------------------------------
+# Relation with other variables (kmeans)
+# -------------------------------------------------------------------------------------------------------------------
 
 ggplot(annotator_summary, aes(x = cluster, fill = gender)) +
   geom_bar(position = "fill") +
@@ -251,9 +250,9 @@ ggplot(annotator_summary, aes(x = cluster, fill = ethnicity)) +
 #   theme_minimal() 
 
 
-
-
-############ Using other variables ########################
+# -------------------------------------------------------------------------------------------------------------------
+# Using other variables
+# -------------------------------------------------------------------------------------------------------------------
 
 df_clust <- annotator_summary[,2:7]
 
@@ -261,7 +260,7 @@ df_clust <- df_clust[,c('age','yes_rate')]
 
 df_clust <- dummy_cols(df_clust, remove_selected_columns = TRUE)
 
-str(df_clust)
+names(df_clust)
 
 df_clust <- scale(df_clust)
 
@@ -299,8 +298,6 @@ pca_data <- as.data.frame(pca$x[, 1:3])
 pca_data$cluster <- as.factor(kmeans_result$cluster)
 summary(pca)
 
-
-
 plot_ly(
   data = pca_data, 
   x = ~PC1, 
@@ -311,9 +308,6 @@ plot_ly(
   type = "scatter3d", 
   mode = "markers"
 ) %>% layout(title = "3D PCA Clustering")
-
-
-
 
 # columns for demographics: gender, age, ethnicity, education, country
 
@@ -331,18 +325,15 @@ plot_ly(
 # 'yes_rate', 'ethnicity'                   k = 10 (elbow)   ch = 968.0862     silhouette = 0.5710186     dunn = 0.02631579 wss = 103.6693  visual = overlapping on 2D and 3D (51% expl var on 3D) (same)
 # 'age','yes_rate', 'ethnicity'             k = 13    ch = 320.1255    silhouette = 0.5489933     dunn = 0.02180598 wss = 306.1638
 
-
-# dunn and ch: good for braking the tie of silhouettes
-
 # Visualizing 'age', 'yes_rate'
 df_clust <- df_clust[,c('age', 'yes_rate')]
 df_clust <- dummy_cols(df_clust, remove_selected_columns = TRUE)
 df_clust <- scale(df_clust)
-k <- 6
+k <- 3
 kmeans_result <- kmeans(df_clust, centers = k, nstart = 25)
 annotator_summary$cluster_multiple <- factor(kmeans_result$cluster)
 
-ggplot(annotator_summary, aes(x = cluster_multiple, fill = gender)) +
+ggplot(annotator_summary, aes(x = cluster_multiple, fill = age)) +
   geom_bar(position = "fill") +
   labs(title = "Age Composition by Cluster", y = "Proportion", x = "Cluster") +
   theme_minimal()
@@ -356,4 +347,4 @@ ggplot(annotator_summary, aes(x = yes_rate, fill = cluster_multiple)) +
 
 # better just to use yes rate clustering alone
 
-### FINAL: clustering by yes_rate, k = 5 using K-means
+### FINAL: clustering by yes_rate, k = 3 using K-means

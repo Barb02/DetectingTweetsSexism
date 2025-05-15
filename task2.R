@@ -1,51 +1,58 @@
+
+# Task 2: Exploratory Analysis of Annotator Behavior
+
+# -------------------------------------------------------------------------------------------------------------------
+# Libraries
+# -------------------------------------------------------------------------------------------------------------------
+
 library(dplyr)
 library(readr)
 library(ggplot2)
 library(rcompanion)
-library(rnaturalearth)
-library(rnaturalearthdata)
 library(sf)
 library(rpart)
 library(rpart.plot)
 library(scales)
+library(tidyr)
+library(fastDummies)
+library(corrplot)
 
+# -------------------------------------------------------------------------------------------------------------------
+# Importing
+# -------------------------------------------------------------------------------------------------------------------
 
-#df = read_csv("/home/barbara/MDS/ATDS/DetectingTweetsSexism/tables/EXIST2025_train.csv")
-#df = read_csv("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/EXIST2025_train.csv")
-df = read_csv("C:/Users/marta/OneDrive/Documentos/FCUP/TACD/project/DetectingTweetsSexism/tables/EXIST2025_train.csv")
+# -- To have the df without the count YES = NO tweets
+load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task1.RData")
+#load("/home/barbara/MDS/ATDS/DetectingTweetsSexism/variables/df_after_task1.RData")
+
+df <- df[ , 1:10]
 
 names(df)
 table(df$label_task1_1)
-table(df$label_task1_1)/dim(df)[1] # not very unbalanced
+table(df$label_task1_1)/dim(df)[1] 
 
 # columns for demographics: gender, age, ethnicity, education, country
 
-annotators = unique(df$annotator_id)
-length(annotators)
+# -------------------------------------------------------------------------------------------------------------------
+# 1. Gender
+# -------------------------------------------------------------------------------------------------------------------
 
-df_annotators <- df[!duplicated(df$annotator_id), ]
-dim(df_annotators)
+unique(df$gender)
 
-
-
-# Get total counts for NO and YES
-total_no <- sum(df$label_task1_1 == "NO")
-total_yes <- sum(df$label_task1_1 == "YES")
-
-
-
-# GENDER
 table_feature_label <- table(df$gender, df$label_task1_1)
+table_feature_label
+chisq_result <- chisq.test(table_feature_label, correct=FALSE)
+chisq_result  # do not reject null hypothesis, label is independent from gender
 
-# Normalize counts by dividing by total NO and YES
-df_gender_label <- as.data.frame(table_feature_label) %>%
-  mutate(proportion = case_when(
-    df$label_task1_1 == "NO" ~ Freq / total_no,    # Explicitly reference label_task1_1
-    df$label_task1_1 == "YES" ~ Freq / total_yes   # Explicitly reference label_task1_1
-  ))
+# normalize by dividing row-wise: distributions of yes x no within gender
+table_feature_label_norm <- prop.table(table_feature_label, 1)
+table_feature_label_norm
+
+df_plot <- as.data.frame(table_feature_label_norm)
+df_plot
 
 # Plot normalized proportions for Gender
-ggplot(df_gender_label, aes(x = gender, y = proportion, fill = label_task1_1)) + 
+ggplot(df_plot, aes(x = Var1, y = Freq, fill = Var2)) + 
   geom_bar(stat = "identity", position = "dodge") +  # 'stat="identity"' to use the calculated proportions
   theme_minimal() +
   labs(
@@ -54,91 +61,71 @@ ggplot(df_gender_label, aes(x = gender, y = proportion, fill = label_task1_1)) +
     y = "Proportion",
     fill = "Label"
   ) +
-  scale_y_continuous(labels = scales::percent) +  # Scale y-axis as percentage
   scale_fill_manual(values = c("YES" = "lightgreen", "NO" = "tomato"))
 
+# If significant: see cramerV
 
+# -------------------------------------------------------------------------------------------------------------------
+# 2. Age
+# -------------------------------------------------------------------------------------------------------------------
 
-
-
-
-
-
-
-
-# GENDER
-
-unique(df_annotators$gender)
-table(df_annotators$gender)
-
-table_feature_label <- table(df$gender, df$label_task1_1)
-table_feature_label
-chisq_result <- chisq.test(table_feature_label, correct=FALSE)
-chisq_result  # do not reject null hypothesis, label is independent from gender
-
-ggplot(df, aes(x = gender, fill = label_task1_1)) + 
-  geom_bar(position = "dodge") +
-  theme_minimal() +
-  labs(
-    title = "Label count by Gender",
-    x = "Gender", 
-    y = "Count",
-    fill = "Label"
-  ) +
-  scale_fill_manual(values = c("YES" = "lightgreen", "NO" = "tomato"))
-
-# If significant:
-# cramerV(table_feature_label)
-# degrees of freedom
-# min(dim(table_feature_label))
-# https://www.statology.org/interpret-cramers-v/
-
-# AGE
-
-unique(df_annotators$age)
-table(df_annotators$age)
+unique(df$age)
 
 table_feature_label <- table(df$age, df$label_task1_1)
 table_feature_label
 chisq_result <- chisq.test(table_feature_label, correct=FALSE)
 chisq_result  # reject null hypothesis, label is associated to age
-cramerV(table_feature_label) # weak 
 
-ggplot(df, aes(x = age, fill = label_task1_1)) + 
-  geom_bar(position = "dodge") +
+# degrees of freedom
+min(dim(table_feature_label)) - 1
+cramerV(table_feature_label) # weak - With large samples, even tiny differences between observed and expected counts can become statistically significant.
+
+table_feature_label_norm <- prop.table(table_feature_label, 1)
+table_feature_label_norm
+df_plot <- as.data.frame(table_feature_label_norm)
+df_plot
+
+ggplot(df_plot, aes(x = Var1, y = Freq, fill = Var2)) + 
+  geom_bar(stat = "identity", position = "dodge") +  
   theme_minimal() +
   labs(
-    title = "Label count by Age",
+    title = "Proportion of Labels by Age",
     x = "Age", 
-    y = "Count",
+    y = "Proportion",
     fill = "Label"
   ) +
   scale_fill_manual(values = c("YES" = "lightgreen", "NO" = "tomato"))
 
-# AGE + GENDER
+# -------------------------------------------------------------------------------------------------------------------
+# 3. Age x Gender
+# -------------------------------------------------------------------------------------------------------------------
 
 df$age_gender <- interaction(df$age, df$gender)
 table_feature_label <- table(df$age_gender, df$label_task1_1)
+table_feature_label
 chisq_result <- chisq.test(table_feature_label, correct=FALSE)
-chisq_result  # reject null hypothesis, label is associated to age x gender
+chisq_result  # reject null hypothesis, label is associated to age x gender. might be due to age being significant
 cramerV(table_feature_label) # weak
 
-ggplot(df, aes(x = interaction(age, gender), fill = label_task1_1)) + 
-  geom_bar(position = "dodge", width = 0.7) +
+table_feature_label_norm <- prop.table(table_feature_label, 1)
+df_plot <- as.data.frame(table_feature_label_norm)
+
+ggplot(df_plot, aes(x = Var1, y = Freq, fill = Var2)) + 
+  geom_bar(stat = "identity", position = "dodge") +  
   theme_minimal() +
   labs(
-    title = "Label count by Age and Gender",
+    title = "Proportion of Labels by Age x Gender",
     x = "Age x Gender", 
-    y = "Count",
+    y = "Proportion",
     fill = "Label"
   ) +
   scale_fill_manual(values = c("YES" = "lightgreen", "NO" = "tomato"))
 
+# -------------------------------------------------------------------------------------------------------------------
+# 4. Ethnicity
+# -------------------------------------------------------------------------------------------------------------------
 
-# ETHNICITY
-
-unique(df_annotators$ethnicity)
-table(df_annotators$ethnicity)
+unique(df$ethnicity)
 
 table_feature_label <- table(df$ethnicity, df$label_task1_1)
 table_feature_label
@@ -146,21 +133,25 @@ chisq_result <- chisq.test(table_feature_label, correct=FALSE)
 chisq_result  # reject null hypothesis, label is associated to ethnicity
 cramerV(table_feature_label) # weak
 
-ggplot(df, aes(x = ethnicity, fill = label_task1_1)) + 
-  geom_bar(position = "dodge") +
+table_feature_label_norm <- prop.table(table_feature_label, 1)
+df_plot <- as.data.frame(table_feature_label_norm)
+
+ggplot(df_plot, aes(x = Var1, y = Freq, fill = Var2)) + 
+  geom_bar(stat = "identity", position = "dodge") +  
   theme_minimal() +
   labs(
-    title = "Label count by Ethnicity",
+    title = "Proportion of Labels by Ethnicity",
     x = "Ethnicity", 
-    y = "Count",
+    y = "Proportion",
     fill = "Label"
   ) +
   scale_fill_manual(values = c("YES" = "lightgreen", "NO" = "tomato"))
 
-# EDUCATION
+# -------------------------------------------------------------------------------------------------------------------
+# 5. Education
+# -------------------------------------------------------------------------------------------------------------------
 
-unique(df_annotators$education)
-table(df_annotators$education)
+unique(df$education)
 
 table_feature_label <- table(df$education, df$label_task1_1)
 table_feature_label
@@ -168,21 +159,25 @@ chisq_result <- chisq.test(table_feature_label, correct=FALSE)
 chisq_result  # reject null hypothesis, label is associated to education
 cramerV(table_feature_label) # weak
 
-ggplot(df, aes(x = education, fill = label_task1_1)) + 
-  geom_bar(position = "dodge") +
+table_feature_label_norm <- prop.table(table_feature_label, 1)
+df_plot <- as.data.frame(table_feature_label_norm)
+
+ggplot(df_plot, aes(x = Var1, y = Freq, fill = Var2)) + 
+  geom_bar(stat = "identity", position = "dodge") +  
   theme_minimal() +
   labs(
-    title = "Label count by Education",
+    title = "Proportion of Labels by Education",
     x = "Education", 
-    y = "Count",
+    y = "Proportion",
     fill = "Label"
   ) +
   scale_fill_manual(values = c("YES" = "lightgreen", "NO" = "tomato"))
 
-# COUNTRY
+# -------------------------------------------------------------------------------------------------------------------
+# 6. Country
+# -------------------------------------------------------------------------------------------------------------------
 
-unique(df_annotators$country)
-table(df_annotators$country)
+unique(df$country)
 
 table_feature_label <- table(df$country, df$label_task1_1)
 table_feature_label
@@ -190,43 +185,24 @@ chisq_result <- chisq.test(table_feature_label, correct=FALSE)
 chisq_result  # reject null hypothesis, label is associated to country
 cramerV(table_feature_label) # weak
 
-ggplot(df, aes(x = country, fill = label_task1_1)) + 
-  geom_bar(position = "dodge") +
+table_feature_label_norm <- prop.table(table_feature_label, 1)
+df_plot <- as.data.frame(table_feature_label_norm)
+
+ggplot(df_plot, aes(x = Var1, y = Freq, fill = Var2)) + 
+  geom_bar(stat = "identity", position = "dodge") +  
   theme_minimal() +
   labs(
-    title = "Label count by Education",
-    x = "Education", 
-    y = "Count",
-    fill = "Label",
+    title = "Proportion of Labels by Country",
+    x = "Country", 
+    y = "Proportion",
+    fill = "Label"
   ) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
   scale_fill_manual(values = c("YES" = "lightgreen", "NO" = "tomato"))
 
-# log count
-ggplot(df, aes(x = country, fill = label_task1_1)) + 
-  geom_bar(position = "dodge") +
-  theme_minimal() +
-  labs(
-    title = "Label count by Education",
-    x = "Education", 
-    y = "Count",
-    fill = "Label",
-  ) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
-  scale_fill_manual(values = c("YES" = "lightgreen", "NO" = "tomato")) +
-  scale_y_log10()
-# TODO: fix
-
-
-
-df_map <- df %>%
-  group_by(country) %>%
-  summarise(
-    yes_percent = mean(label_task1_1 == "YES") * 100
-  )
-
-
-# CONTINENT
+# -------------------------------------------------------------------------------------------------------------------
+# 7. Continent/Region
+# -------------------------------------------------------------------------------------------------------------------
 
 continent_map <- c('Algeria'= 'Middle East & North Africa',
   'Argentina'= 'Latin America & Caribbean',
@@ -270,95 +246,145 @@ chisq_result <- chisq.test(table_feature_label, correct=FALSE)
 chisq_result  # reject null hypothesis, label is associated to continent
 cramerV(table_feature_label) # weak
 
-ggplot(df, aes(x = continent, fill = label_task1_1)) + 
-  geom_bar(position = "dodge") +
+table_feature_label_norm <- prop.table(table_feature_label, 1)
+df_plot <- as.data.frame(table_feature_label_norm)
+
+ggplot(df_plot, aes(x = Var1, y = Freq, fill = Var2)) + 
+  geom_bar(stat = "identity", position = "dodge") +  
   theme_minimal() +
   labs(
-    title = "Label count by Education",
-    x = "Education", 
-    y = "Count",
-    fill = "Label",
-  ) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
-  scale_fill_manual(values = c("YES" = "lightgreen", "NO" = "tomato"))  +
-  scale_y_log10()
-
-# COUNTRY + GENDER
-
-df$country_gender <- interaction(df$country, df$gender)
-table_feature_label <- table(df$country_gender, df$label_task1_1)
-
-
-ggplot(df, aes(x = country, fill = gender)) + 
-  geom_bar(position = "dodge", width = 0.7) +
-  theme_minimal() +
-  labs(
-    title = "Label count by Age and Gender",
-    x = "Age x Gender", 
-    y = "Count",
+    title = "Proportion of Labels by Region",
+    x = "Region", 
+    y = "Proportion",
     fill = "Label"
   ) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
-  scale_fill_manual(values = c("F" = "lightgreen", "M" = "tomato"))
+  scale_fill_manual(values = c("YES" = "lightgreen", "NO" = "tomato"))
+# country is better, region generalizes too much
 
+# -------------------------------------------------------------------------------------------------------------------
+# 8. Country ~ Gender (see if the people from one country are women or men)
+# -------------------------------------------------------------------------------------------------------------------
 
-# ------FEATURE IMPORTANCE---------
-df$label_task1_1 <- as.factor(df$label_task1_1)
-df$gender <- as.factor(df$gender)
-df$age <- as.factor(df$age)
-df$ethnicity <- as.factor(df$ethnicity)
-df$education <- as.factor(df$education)
-df$country <- as.factor(df$country)
+table_feature_label <- table(df$gender, df$country)
+table_feature_label
+table_feature_label_norm <- prop.table(table_feature_label, 2) # by col
+df_plot <- as.data.frame(table_feature_label_norm)
 
-# Build a decision tree using annotator demographics
-tree_model <- rpart(label_task1_1 ~ gender + age + ethnicity + education + country,
-                    data = df,
-                    method = "class",
-                    control = rpart.control(cp = 0.002))  # cp = complexity parameter
-
-rpart.plot(tree_model, type = 2, extra = 104, fallen.leaves = TRUE,
-           main = "Decision Tree for Label Prediction")
-
-tree_model$variable.importance
-
-importance_df <- data.frame(
-  Feature = names(tree_model$variable.importance),
-  Importance = tree_model$variable.importance
-)
-
-ggplot(importance_df, aes(x = reorder(Feature, Importance), y = Importance)) +
-  geom_col(fill = "steelblue") +
-  coord_flip() +
-  labs(title = "Feature Importance from Decision Tree",
-       x = "Feature", y = "Importance") +
-  theme_minimal()
-
-importance <- tree_model$variable.importance
-importance / sum(importance) * 100  # % contribution
-
-# Compute relative importance
-importance <- tree_model$variable.importance
-importance_df <- data.frame(
-  Feature = names(importance),
-  Importance = importance / sum(importance) * 100
-)
-
-# Plot
-library(ggplot2)
-ggplot(importance_df, aes(x = reorder(Feature, Importance), y = Importance)) +
-  geom_col(fill = "steelblue") +
-  coord_flip() +
+ggplot(df_plot, aes(x = Var2, y = Freq, fill = Var1)) + 
+  geom_bar(stat = "identity", position = "dodge", width = 0.7) + 
   theme_minimal() +
   labs(
-    title = "Relative Feature Importance",
-    x = "Feature",
-    y = "Importance (%)"
-  )
+    title = "Gender proportion by Country",
+    x = "Country", 
+    y = "Proportion",
+    fill = "Label"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  scale_fill_manual(values = c("F" = "pink", "M" = "lightblue"))
+
+# -------------------------------------------------------------------------------------------------------------------
+# Correlation
+# -------------------------------------------------------------------------------------------------------------------
+
+df_cor <- df[ , 5:10]
+
+df_cor$label_task1_1 <- ifelse(df_cor$label_task1_1 == "YES", 1, 0)
+
+df_dummies <- dummy_cols(df_cor[, 1:5], remove_selected_columns = TRUE)
+
+df_all  <- cbind(df_dummies, df_cor[ , !(names(df_cor) %in% names(df_cor[, 1:5]))])
+
+cor_matrix <- cor(df_all, use = "complete.obs")
+
+corrplot(cor_matrix,
+         method = "circle",
+         type = "upper",
+         tl.cex = 0.4,
+         tl.srt = 45,
+         cl.cex = 1.0,
+         title = "Correlation Matrix of Features",
+         mar = c(0, 0, 0, 0))
+
+cor_label <- cor_matrix[,"label_task1_1"]
+cor_label <- cor_label[!names(cor_label) %in% "label_task1_1"]
+cor_label <- cor_label[order(abs(cor_label), decreasing = TRUE)]
+print(cor_label)
+
+# -------------------------------------------------------------------------------------------------------------------
+# Distribution
+# -------------------------------------------------------------------------------------------------------------------
+
+df_all <- df_all %>% 
+  select(label_task1_1, everything())
+
+n_yes <- sum(df_all$label_task1_1 == 1)
+n_no  <- sum(df_all$label_task1_1 == 0)
+
+yes_counts <- colSums(df_all[df_all$label_task1_1 == 1, 2:52] >= 1)
+no_counts  <- colSums(df_all[df_all$label_task1_1 == 0, 2:52] >= 1)
+
+yes_prop <- yes_counts / n_yes
+no_prop  <- no_counts  / n_no
+
+result <- data.frame(
+  Column = names(df_all)[2:52],
+  Count_1 = yes_counts,
+  Proportion_1 = round(yes_prop, 3),
+  Count_0 = no_counts,
+  Proportion_0 = round(no_prop, 3)
+)
+
+result$Difference <- abs(result$Proportion_1 - result$Proportion_0)
+result <- result[order(-result$Difference), ]
+
+print(result)
+
+# -------------------------------------------------------------------------------------------------------------------
+# Logistic Regression
+# -------------------------------------------------------------------------------------------------------------------
+
+df_cor <- df[ , 5:10]
+
+df_cor$label_task1_1 <- ifelse(df_cor$label_task1_1 == "YES", 1, 0)
+
+# df_cor$continent <- continent_map[df_cor$country]
+
+# df_cor <- df_cor[, !(names(df_cor) %in% c("country"))]
+df_cor$age <- factor(df_cor$age) 
+df_cor$country <- factor(df_cor$country) 
+df_cor$education <- factor(df_cor$education)
+df_cor$ethnicity <- factor(df_cor$ethnicity)
+df_cor$age <- relevel(df_cor$age, ref = "23-45")
+df_cor$country <- relevel(df_cor$country, ref = "Nepal")
+df_cor$education <- relevel(df_cor$education, ref = "Less than high school diploma")
+df_cor$ethnicity <- relevel(df_cor$ethnicity, ref = "White or Caucasian")
+
+model_logit <- glm(label_task1_1 ~ ., data = df_cor, family = binomial)
+summary(model_logit)
+
+model_logit <- glm(label_task1_1 ~ . + age * gender + country * gender, data = df_cor, family = binomial)
+summary(model_logit)
+
+# -------------------------------------------------------------------------------------------------------------------
+# Conclusions from Task 2 
+# -------------------------------------------------------------------------------------------------------------------
+
+# Here is what we took from: 
+
+# 1. Gender -> Not significant but might be important for interactions (ex: age x gender)
+
+# 2. Age -> age23-45 , age46+
+
+# 4. Ethnicity -> ethnicityMiddle Eastern, ethnicityother, ethnicityMultiracial, ethnicityBlack or African American
+
+# 5. Education -> educationBachelor’s degree, educationDoctorate
+
+# 6. Country -> Algeria, Canada, Cyprus, Ireland, Israel
 
 
-plot_normalized_by_label_total(df, "gender")
-plot_normalized_by_label_total(df, "age")
-plot_normalized_by_label_total(df, "education")
-plot_normalized_by_label_total(df, "ethnicity")
-plot_normalized_by_label_total(df, "country")
+
+
+
+
 
