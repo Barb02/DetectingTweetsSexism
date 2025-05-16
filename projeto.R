@@ -7,6 +7,12 @@
 
 library(fastDummies)
 source("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/functions.R")
+load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/prop_table_age.RData")
+load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/prop_table_country.RData")
+load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/prop_table_education.RData")
+load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/prop_table_ethnicity.RData")
+load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/prop_table_gender.RData")
+
 
 #df = read_csv("/home/barbara/MDS/ATDS/DetectingTweetsSexism/tables/EXIST2025_train.csv")
 #df = read_csv("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/EXIST2025_train.csv")
@@ -44,38 +50,34 @@ source("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweet
 
 #save(df, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task1.RData")
 
-load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task1.RData")
+#load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task1.RData")
 
 # -------------------------------------------------------------------------------------------------------------------
 # Task 2
 # -------------------------------------------------------------------------------------------------------------------
 
-df_dummies <- dummy_cols(df[, 5:9], remove_selected_columns = TRUE)
-df_dummies <- df_dummies[, c("gender_F", "age_18-22", "ethnicity_Middle Eastern", "ethnicity_other", 
-                             "ethnicity_Multiracial", "ethnicity_Black or African American", "education_Bachelor’s degree",
-                             "education_Doctorate","country_Algeria", "country_Canada", "country_Cyprus", 
-                             "country_Ireland", "country_Israel")]
-df <- cbind(df, df_dummies)
-df <- df[, -c(1:9)]
+#df_dummies <- dummy_cols(df[, 5:9], remove_selected_columns = TRUE)
+#df_dummies <- df_dummies[, c("gender_F", "age_18-22", "ethnicity_Middle Eastern", "ethnicity_other", 
+#                             "ethnicity_Multiracial", "ethnicity_Black or African American", "education_Bachelor’s degree",
+#                             "education_Doctorate","country_Algeria", "country_Canada", "country_Cyprus", 
+#                             "country_Ireland", "country_Israel")]
+#df <- cbind(df, df_dummies)
 
 # -------------------------------------------------------------------------------------------------------------------
 # Task 3
 # -------------------------------------------------------------------------------------------------------------------
 
-load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/kmeans_model.RData")
+#df <- add_proportions(df,
+#                      prop_table_age,
+#                      prop_table_education,
+#                      prop_table_gender,
+#                      prop_table_ethnicity,
+#                      prop_table_country)
 
-annotator_summary <- df %>%
-  group_by(annotator_id, gender, age, country, ethnicity, education) %>%
-  summarise(
-    yes_rate = mean(label_task1_1 == "YES"),
-    total_labeled = n()
-  )
-
-annotator_summary$cluster <- sapply(annotator_summary$yes_rate, assign_cluster, centers = kmeans_result$centers)
 
 #save(df, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task_2_3.RData")
 
-#load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task_2_3.RData")
+load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task_2_3.RData")
 
 # -------------------------------------------------------------------------------------------------------------------
 # Task 4

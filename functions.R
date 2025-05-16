@@ -139,10 +139,78 @@ stats_emot_sent <- function(df) {
 }
 
 # -------------------------------------------------------------------------------------------------------------------
-# Function to assign a cluster according to the yes rate
+# Function to assign add proportions based on annotators characteristics
 # -------------------------------------------------------------------------------------------------------------------
 
-assign_cluster <- function(rate, centers) {
-  dists <- (rate - centers)^2
-  which.min(dists)
+add_proportions <- function(df, 
+                            prop_table_age, 
+                            prop_table_education,
+                            prop_table_gender,
+                            prop_table_ethnicity,
+                            prop_table_country) {
+  
+  # Inicializar colunas "1", "2", "3" com zero
+  df$`1` <- 0
+  df$`2` <- 0
+  df$`3` <- 0
+  
+  for (i in seq_len(nrow(df))) {
+    
+    # AGE
+    age_row <- prop_table_age[prop_table_age$age == df$age[i], ]
+    if (nrow(age_row) == 1) {
+      df$`1`[i] <- df$`1`[i] + age_row$`1`
+      df$`2`[i] <- df$`2`[i] + age_row$`2`
+      df$`3`[i] <- df$`3`[i] + age_row$`3`
+    }
+    
+    # EDUCATION
+    edu_row <- prop_table_education[prop_table_education$education == df$education[i], ]
+    if (nrow(edu_row) == 1) {
+      df$`1`[i] <- df$`1`[i] + edu_row$`1`
+      df$`2`[i] <- df$`2`[i] + edu_row$`2`
+      df$`3`[i] <- df$`3`[i] + edu_row$`3`
+    }
+    
+    # GENDER
+    gender_row <- prop_table_gender[prop_table_gender$gender == df$gender[i], ]
+    if (nrow(gender_row) == 1) {
+      df$`1`[i] <- df$`1`[i] + gender_row$`1`
+      df$`2`[i] <- df$`2`[i] + gender_row$`2`
+      df$`3`[i] <- df$`3`[i] + gender_row$`3`
+    }
+    
+    # ETHNICITY
+    eth_row <- prop_table_ethnicity[prop_table_ethnicity$ethnicity == df$ethnicity[i], ]
+    if (nrow(eth_row) == 1) {
+      df$`1`[i] <- df$`1`[i] + eth_row$`1`
+      df$`2`[i] <- df$`2`[i] + eth_row$`2`
+      df$`3`[i] <- df$`3`[i] + eth_row$`3`
+    }
+    
+    # COUNTRY
+    country_row <- prop_table_country[prop_table_country$country == df$country[i], ]
+    if (nrow(country_row) == 1) {
+      df$`1`[i] <- df$`1`[i] + country_row$`1`
+      df$`2`[i] <- df$`2`[i] + country_row$`2`
+      df$`3`[i] <- df$`3`[i] + country_row$`3`
+    }
+  }
+  
+  return(df)
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
