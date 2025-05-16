@@ -18,13 +18,14 @@ library(corrplot)
 library(reshape2)
 library(fastDummies)
 library(plotly)
+library(tidyr)
 
 # -------------------------------------------------------------------------------------------------------------------
 # Initial Analysis
 # -------------------------------------------------------------------------------------------------------------------
 
-load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task1.RData")
-#load("/home/barbara/MDS/ATDS/DetectingTweetsSexism/variables/df_after_task1.RData")
+#load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task1.RData")
+load("/home/barbara/MDS/ATDS/DetectingTweetsSexism/variables/df_after_task1.RData")
 names(df)
 
 annotator_summary <- df %>%
@@ -32,7 +33,7 @@ annotator_summary <- df %>%
   summarise(
     yes_rate = mean(label_task1_1 == "YES"),
     total_labeled = n()
-  )
+  ) # each row has a unique annotator
 
 annotator_summary
 
@@ -224,20 +225,96 @@ res_hc$dunn
 # Relation with other variables (kmeans)
 # -------------------------------------------------------------------------------------------------------------------
 
+# Gender
+
 ggplot(annotator_summary, aes(x = cluster, fill = gender)) +
   geom_bar(position = "fill") +
   labs(title = "Gender Composition by Cluster", y = "Proportion", x = "Cluster") +
   theme_minimal()
+
+ggplot(annotator_summary, aes(x = gender, fill = cluster)) +
+  geom_bar(position = "fill") +
+  labs(title = "Gender Composition by Cluster", y = "Proportion", x = "Gender") +
+  theme_minimal()
+
+# Proportions of category by cluster
+
+subset <- annotator_summary[, c("gender", "cluster")]
+cluster_prop <- subset %>%
+  count(cluster, gender) %>%
+  group_by(gender) %>%
+  mutate(proportion = n / sum(n)) %>%
+  ungroup()
+prop_table <- cluster_prop %>%
+  select(cluster, gender, proportion) %>%
+  pivot_wider(
+    names_from = cluster,
+    values_from = proportion,
+    values_fill = 0
+  ) %>%
+  mutate(across(where(is.numeric), ~ round(.x, 2))) %>%
+  select(gender, "2", "1", "3") 
+print(prop_table)
+
+# Age
 
 ggplot(annotator_summary, aes(x = cluster, fill = age)) +
   geom_bar(position = "fill") +
   labs(title = "Age Composition by Cluster", y = "Proportion", x = "Cluster") +
   theme_minimal()
 
+ggplot(annotator_summary, aes(x = age, fill = cluster)) +
+  geom_bar(position = "fill") +
+  labs(title = "Cluster Composition by Age", y = "Proportion", x = "Age") +
+  theme_minimal()
+
+subset <- annotator_summary[, c("age", "cluster")]
+cluster_prop <- subset %>%
+  count(cluster, age) %>%
+  group_by(age) %>%
+  mutate(proportion = n / sum(n)) %>%
+  ungroup()
+prop_table <- cluster_prop %>%
+  select(cluster, age, proportion) %>%
+  pivot_wider(
+    names_from = cluster,
+    values_from = proportion,
+    values_fill = 0
+  ) %>%
+  mutate(across(where(is.numeric), ~ round(.x, 2))) %>%
+  select(age, "2", "1", "3") 
+print(prop_table)
+
+# Education
+
 ggplot(annotator_summary, aes(x = cluster, fill = education)) +
   geom_bar(position = "fill") +
   labs(title = "Education Composition by Cluster", y = "Proportion", x = "Cluster") +
   theme_minimal()
+
+ggplot(annotator_summary, aes(x = education, fill = cluster)) +
+  geom_bar(position = "fill") +
+  labs(title = "Cluster Composition by Education", y = "Proportion", x = "Education") +
+  theme_minimal()
+
+subset <- annotator_summary[, c("education", "cluster")]
+cluster_prop <- subset %>%
+  count(cluster, education) %>%
+  group_by(education) %>%
+  mutate(proportion = n / sum(n)) %>%
+  ungroup()
+prop_table <- cluster_prop %>%
+  select(cluster, education, proportion) %>%
+  pivot_wider(
+    names_from = cluster,
+    values_from = proportion,
+    values_fill = 0
+  ) %>%
+  mutate(across(where(is.numeric), ~ round(.x, 2))) %>%
+  select(education, "2", "1", "3") 
+print(prop_table)
+
+# Ethnicity
 
 ggplot(annotator_summary, aes(x = cluster, fill = ethnicity)) +
   geom_bar(position = "fill") +
@@ -245,11 +322,61 @@ ggplot(annotator_summary, aes(x = cluster, fill = ethnicity)) +
   theme_minimal()  +
   scale_fill_brewer(palette = "Set1")
 
-# Cant do by country because visualization gets hard (fill brewer does not have enough colors)
-# ggplot(annotator_summary, aes(x = cluster, fill = country)) +
-#   geom_bar(position = "fill") +
-#   labs(title = "Country Composition by Cluster", y = "Proportion", x = "Cluster") +
-#   theme_minimal() 
+ggplot(annotator_summary, aes(x = ethnicity, fill = cluster)) +
+  geom_bar(position = "fill") +
+  labs(title = "Cluster Composition by Ethnicity", y = "Proportion", x = "Ethnicity") +
+  theme_minimal() 
+
+subset <- annotator_summary[, c("ethnicity", "cluster")]
+cluster_prop <- subset %>%
+  count(cluster, ethnicity) %>%
+  group_by(ethnicity) %>%
+  mutate(proportion = n / sum(n)) %>%
+  ungroup()
+prop_table <- cluster_prop %>%
+  select(cluster, ethnicity, proportion) %>%
+  pivot_wider(
+    names_from = cluster,
+    values_from = proportion,
+    values_fill = 0
+  ) %>%
+  mutate(across(where(is.numeric), ~ round(.x, 2))) %>%
+  select(ethnicity, "2", "1", "3") 
+print(prop_table)
+
+# Country 
+
+#  visualization gets hard (too much countries)
+ggplot(annotator_summary, aes(x = cluster, fill = country)) +
+  geom_bar(position = "fill", color = "black") +
+  labs(title = "Country Composition by Cluster", y = "Proportion", x = "Cluster") +
+  theme_minimal()
+
+ggplot(annotator_summary, aes(x = country, fill = cluster)) +
+  geom_bar(position = "fill", color = "black") +
+  labs(title = "Cluster Composition by Country", y = "Proportion", x = "Country") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+subset <- annotator_summary[, c("country", "cluster")]
+
+country_cluster_prop <- subset %>%
+  count(cluster, country) %>%
+  group_by(country) %>%
+  mutate(proportion = n / sum(n)) %>%
+  ungroup()
+
+prop_table <- country_cluster_prop %>%
+  select(cluster, country, proportion) %>%
+  pivot_wider(
+    names_from = cluster,
+    values_from = proportion,
+    values_fill = 0
+  ) %>%
+  mutate(across(where(is.numeric), ~ round(.x, 2))) %>%
+  select(country, "2", "1", "3") 
+
+print(prop_table, n = 33)
 
 
 # -------------------------------------------------------------------------------------------------------------------
