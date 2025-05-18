@@ -16,8 +16,6 @@ load("C:/Users/marta/OneDrive/Documentos/FCUP/TACD/project/DetectingTweetsSexism
 
 df <- df[, 5:41]
 
-write.csv(df, file = "C:/Users/marta/OneDrive/Documentos/FCUP/TACD/project/DetectingTweetsSexism/variables/df_after_task_2_3.csv", row.names = FALSE)
-
 # -------------------------------------------------------------------------------------------------------------------
 # Association Rules
 # -------------------------------------------------------------------------------------------------------------------
