@@ -209,7 +209,6 @@ cat("\n Top 10 Rules (INTERSECT features, sorted by COUNT):\n")
 if (length(rules_intersect_count) > 0) inspect(head(rules_intersect_count, 10)) else cat("No strong rules found (COUNT).\n")
 
 #tried with rules_no but there weren't any rules ("default" label, more varience)
-#tried with basic features and didn't result
 
 
 #_____________________________________________________________
@@ -234,16 +233,16 @@ rule_colloc_yes <- subset(rules_colloc,
                           lhs %pin% "colloc_yes=yes" & rhs %pin% "label_task1_1=YES")
 rule_colloc_yes <- sort(rule_colloc_yes, by = "lift", decreasing = TRUE)
 
-cat("\n🔍 Strength of rule: {colloc_yes = yes} => {label_task1_1 = YES}\n")
+cat("\n Strength of rule: {colloc_yes = yes} => {label_task1_1 = YES}\n")
 if (length(rule_colloc_yes) > 0) {
   inspect(rule_colloc_yes)
 } else {
-  cat("⚠️ Rule not found.\n")
+  cat("Rule not found.\n")
 }
 
 
 # PART 2 — Run Apriori without colloc_yes
-cat("\n📤 Now discovering rules with colloc_yes removed...\n")
+cat("\n Now discovering rules with colloc_yes removed...\n")
 
 # Remove colloc_yes from the preselected features
 preselected_no_colloc <- setdiff(preselected, "colloc_yes")
@@ -280,11 +279,11 @@ rules_nocolloc_yes <- subset(rules_nocolloc, rhs %in% "label_task1_1=YES" & lift
 rules_nocolloc_yes <- sort(rules_nocolloc_yes, by = "lift", decreasing = TRUE)
 
 # Show results
-cat("\n🔍 Top 10 Rules WITHOUT colloc_yes:\n")
+cat("\n Top 10 Rules WITHOUT colloc_yes:\n")
 if (length(rules_nocolloc_yes) > 0) {
   inspect(head(rules_nocolloc_yes, 10))
 } else {
-  cat("⚠️ No strong rules found without colloc_yes.\n")
+  cat("No strong rules found without colloc_yes.\n")
 }
 
 
@@ -332,55 +331,29 @@ rules_basic_yes <- sort(rules_basic_yes, by = "lift", decreasing = TRUE)
 # ==============================
 # Step 6: Inspect Top Rules
 # ==============================
-cat("\n🔹 Top 10 Rules (Demographics only, sorted by LIFT):\n")
+cat("\n Top 10 Rules (Demographics only, sorted by LIFT):\n")
 if (length(rules_basic_yes) > 0) {
   inspect(head(rules_basic_yes, 10))
 } else {
-  cat("⚠️ No strong rules found for label_task1_1 = YES.\n")
+  cat(" No strong rules found for label_task1_1 = YES.\n")
 }
 
 # ==============================
 # Step 7: (Optional) Also Show by COUNT
 # ==============================
 rules_basic_yes_count <- sort(rules_basic_yes, by = "count", decreasing = TRUE)
-cat("\n🔹 Top 10 Rules (Demographics only, sorted by COUNT):\n")
+cat("\n Top 10 Rules (Demographics only, sorted by COUNT):\n")
 if (length(rules_basic_yes_count) > 0) {
   inspect(head(rules_basic_yes_count, 10))
 } else {
-  cat("⚠️ No strong rules by count.\n")
+  cat(" No strong rules by count.\n")
 }
 
 #-------------------------------------------------------------------------------------------
 
-
-
-
-
-
-df_colloc <- df[, c("colloc_yes", "label_task1_1")]
-df_colloc[] <- lapply(df_colloc, as.factor)
-names(df_colloc) <- make.names(names(df_colloc), unique = TRUE)
-
-trans_colloc <- as(df_colloc, "transactions")
-
-rules_colloc <- apriori(trans_colloc,
-                        parameter = list(supp = 0.01, conf = 0.5, maxlen = 2))
-
-rule_colloc_yes <- subset(rules_colloc, lhs %in% "colloc_yes=yes" & rhs %in% "label_task1_1=YES")
-rule_colloc_yes <- sort(rule_colloc_yes, by = "lift", decreasing = TRUE)
-
-cat("\n🔹 Strength of rule: {colloc_yes = yes} => {label_task1_1 = YES}\n")
-if (length(rule_colloc_yes) > 0) inspect(rule_colloc_yes) else cat("⚠️ No such rule found.\n")
-
-
-
-
-
-
-
-
-
-#----------------------------------------------------------------------------------------------
+#======================
+# Nao me lembro
+#======================
 
 df[binary_cols] <- lapply(df[binary_cols], function(x) factor(ifelse(x == 1, "yes", "no")))
 
@@ -404,45 +377,120 @@ rules_sorted <- sort(rules, by = "lift", decreasing = TRUE)
 inspect(rules_sorted[1:15])
 
 
+
 #---------------------------------------------------------------------
 
-# Define relevant fields
-attributes <- c("gender", "age", "education")
-keywords <- c("word_woman", "word_women", "word_men", "word_girl", "word_sex",
-              "word_bitch", "word_fuck", "word_love", "word_peopl", "word_gender")
-label_col <- "label_task1_1"
+# ==============================
+# Combined Annotator + Tweet Features (LABEL = NO)
+# ==============================
 
-# Build transaction list row-by-row
-transactions_list <- apply(df, 1, function(row) {
-  items <- c()
-  
-  # Add annotator attributes
-  for (attr in attributes) {
-    items <- c(items, paste(attr, row[[attr]], sep = "_"))
-  }
-  
-  # Add label
-  items <- c(items, paste("label", row[[label_col]], sep = "_"))
-  
-  # Add keywords if present
-  for (kw in keywords) {
-    if (as.numeric(row[[kw]]) > 0) {
-      items <- c(items, paste("has", kw, sep = "_"))
-    }
-  }
-  
-  return(items)
-})
+
+# Step 1: Define full feature set (annotator + tweet)
+combined_features <- c(
+  "gender", "age", "ethnicity", "education", "country",
+  "word_woman", "word_women", "word_men", "word_girl", "word_sex",
+  "word_bitch", "word_fuck", "word_love", "word_peopl", "word_gender",
+  "colloc_yes", "colloc_no",
+  "all_pos", "all_neg", "tweet_sentiment",
+  "sadness", "sent_min", "disgust_max",
+  "label_task1_1"
+)
+
+# Step 2: Subset and prepare data
+df_combined <- df[, combined_features]
+
+# Binary tweet columns to convert
+binary_tweet_cols <- c(
+  "word_woman", "word_women", "word_men", "word_girl", "word_sex",
+  "word_bitch", "word_fuck", "word_love", "word_peopl", "word_gender",
+  "colloc_yes", "colloc_no"
+)
+df_combined[binary_tweet_cols] <- lapply(df_combined[binary_tweet_cols], function(x) factor(ifelse(x == 1, "yes", "no")))
+
+# Discretize numeric features
+df_combined$tweet_sentiment <- ifelse(df$tweet_sentiment > median(df$tweet_sentiment), "sentiment_high", "sentiment_low")
+df_combined$all_pos         <- ifelse(df$all_pos > median(df$all_pos), "pos_high", "pos_low")
+df_combined$all_neg         <- ifelse(df$all_neg > median(df$all_neg), "neg_high", "neg_low")
+df_combined$sadness         <- ifelse(df$sadness > median(df$sadness), "sadness_high", "sadness_low")
+df_combined$sent_min        <- ifelse(df$sent_min > median(df$sent_min), "sent_min_high", "sent_min_low")
+df_combined$disgust_max     <- ifelse(df$disgust_max > median(df$disgust_max), "disgust_high", "disgust_low")
+
+# Convert all to factors
+df_combined[] <- lapply(df_combined, as.factor)
+names(df_combined) <- make.names(names(df_combined), unique = TRUE)
+
+trans_all <- as(df_combined, "transactions")
+
+rules_all_no <- apriori(trans_all,
+                        parameter = list(supp = 0.02, conf = 0.7, maxlen = 4))
+
+rules_all_no <- subset(rules_all_no, rhs %in% "label_task1_1=NO" & lift > 1)
+rules_all_no <- sort(rules_all_no, by = "lift", decreasing = TRUE)
+
+cat("\n Top 10 Rules WITH colloc_yes (label = NO):\n")
+if (length(rules_all_no) > 0) {
+  inspect(head(rules_all_no, 10))
+} else {
+  cat(" No strong rules found (with colloc_yes).\n")
+}
+# O colloc=yes apenas aparece na primeira regra para NO
+
+
+#---------------------------------------------------------------------
+# ==============================
+# Combined Annotator + Tweet Features (LABEL = YES)
+# ==============================
+
+# Step 1: Define full feature set (annotator + tweet)
+combined_features <- c(
+  "gender", "age", "ethnicity", "education", "country",
+  "word_woman", "word_women", "word_men", "word_girl", "word_sex",
+  "word_bitch", "word_fuck", "word_love", "word_peopl", "word_gender",
+  "colloc_yes", "colloc_no",
+  "all_pos", "all_neg", "tweet_sentiment",
+  "sadness", "sent_min", "disgust_max",
+  "label_task1_1"
+)
+
+# Step 2: Subset and prepare data
+df_combined <- df[, combined_features]
+
+# Convert binary tweet columns to yes/no
+binary_tweet_cols <- c(
+  "word_woman", "word_women", "word_men", "word_girl", "word_sex",
+  "word_bitch", "word_fuck", "word_love", "word_peopl", "word_gender",
+  "colloc_yes", "colloc_no"
+)
+df_combined[binary_tweet_cols] <- lapply(df_combined[binary_tweet_cols], function(x) factor(ifelse(x == 1, "yes", "no")))
+
+# Discretize numeric variables
+df_combined$tweet_sentiment <- ifelse(df$tweet_sentiment > median(df$tweet_sentiment), "sentiment_high", "sentiment_low")
+df_combined$all_pos         <- ifelse(df$all_pos > median(df$all_pos), "pos_high", "pos_low")
+df_combined$all_neg         <- ifelse(df$all_neg > median(df$all_neg), "neg_high", "neg_low")
+df_combined$sadness         <- ifelse(df$sadness > median(df$sadness), "sadness_high", "sadness_low")
+df_combined$sent_min        <- ifelse(df$sent_min > median(df$sent_min), "sent_min_high", "sent_min_low")
+df_combined$disgust_max     <- ifelse(df$disgust_max > median(df$disgust_max), "disgust_high", "disgust_low")
+
+# Convert all columns to factor
+df_combined[] <- lapply(df_combined, as.factor)
+names(df_combined) <- make.names(names(df_combined), unique = TRUE)
 
 # Convert to transaction format
-trans <- as(transactions_list, "transactions")
+trans_all <- as(df_combined, "transactions")
 
-# Apply Apriori algorithm
-rules <- apriori(trans, parameter = list(supp = 0.02, conf = 0.6))
+# Mine rules
+rules_all_yes <- apriori(trans_all,
+                         parameter = list(supp = 0.02, conf = 0.7, maxlen = 4))
 
-# Sort and inspect top rules
-rules_sorted <- sort(rules, by = "lift", decreasing = TRUE)
-inspect(rules_sorted[1:15])
+# Filter rules for label = YES
+rules_all_yes <- subset(rules_all_yes, rhs %in% "label_task1_1=YES" & lift > 1)
+rules_all_yes <- sort(rules_all_yes, by = "lift", decreasing = TRUE)
 
-length(rules)
+# Output
+cat("\n Top 10 Rules (Combined features, label = YES):\n")
+if (length(rules_all_yes) > 0) {
+  inspect(head(rules_all_yes, 10))
+} else {
+  cat(" No strong rules found for label = YES.\n")
+}
 
