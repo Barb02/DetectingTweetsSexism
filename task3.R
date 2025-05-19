@@ -60,24 +60,28 @@ fviz_nbclust(annotator_df, kmeans, method = "silhouette") +
 # Chosen: K = 4, aligns better with our needs
 
 kmeans_result <- kmeans(annotator_df, centers = 4, nstart = 25)
-annotator_summary$cluster <- factor(kmeans_result$cluster)
 
+fviz_cluster(kmeans_result, data = annotator_df, geom = "point", ellipse.type = "convex") + 
+  theme_minimal() +
+  ggtitle(paste("K-means Clustering with K = 4"))
 #save(kmeans_result, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/kmeans_model.RData")
 
-cluster_order <- annotator_summary %>%
-  group_by(cluster) %>%
-  summarize(max_rate = max(yes_rate)) %>%
-  arrange(max_rate) %>%
-  pull(cluster)
+pca <- prcomp(annotator_df, scale. = TRUE)
+pca_data <- as.data.frame(pca$x[, 1:3]) 
+pca_data$cluster <- as.factor(kmeans_result$cluster)
+summary(pca)
+plot_ly(
+  data = pca_data, 
+  x = ~PC1, 
+  y = ~PC2, 
+  z = ~PC3, 
+  color = ~cluster, 
+  colors = "Set1", 
+  type = "scatter3d", 
+  mode = "markers"
+) %>% layout(title = "3D PCA Clustering")
 
-# re order clusters to allow for better visualization
-annotator_summary$cluster <- factor(annotator_summary$cluster, levels = cluster_order)
-
-ggplot(annotator_summary, aes(x = yes_rate, fill = cluster)) +
-  geom_histogram(bins = 30) +
-  labs(title = "Annotators Clustered by Labeling Behavior", x = "Proportion of Sexist Labels", fill = "Cluster")
-
-aggregate(yes_rate ~ cluster, data = annotator_summary, summary)
+annotator_df$cluster <- kmeans_result$cluster
 
 # -------------------------------------------------------------------------------------------------------------------
 # Evaluation 
@@ -85,7 +89,7 @@ aggregate(yes_rate ~ cluster, data = annotator_summary, summary)
 
 # Quality
 
-res <- cluster.stats(dist(yes_rate_df), kmeans_result$cluster)
+res <- cluster.stats(dist(annotator_df), kmeans_result$cluster)
 
 res$within.cluster.ss # 1.420638 the lower the better (unbounded)
 
@@ -103,7 +107,7 @@ res$dunn # 0.016
 
 # Stability
 
-results <- replicate(50, kmeans(yes_rate_df, centers = 3, nstart = 1)$cluster)
+results <- replicate(50, kmeans(annotator_df, centers = 4, nstart = 1)$cluster)
 results
 
 ari_matrix <- matrix(NA, ncol = 50, nrow = 50)
@@ -131,30 +135,28 @@ ggplot(ari_df, aes(x = Run1, y = Run2, fill = ARI)) +
   coord_fixed()
 
 # The ARI ranges from -1 to 1, where 1 indicates a perfect match between the clustering result and "ground truth".
-# Good stability
+# Medium/Good stability
 
 # -------------------------------------------------------------------------------------------------------------------
 # Hierarchical clustering
 # -------------------------------------------------------------------------------------------------------------------
 
-hc <- hclust(dist(yes_rate_df), method="ward.D")
+hc <- hclust(dist(annotator_df), method="ward.D2")
 plot(hc, main = "Dendrogram of Hierarchical Clustering")
 
 sil_widths <- sapply(2:10, function(k) {
   clusters <- cutree(hc, k = k)
-  mean(silhouette(clusters, dist(yes_rate_df))[, 3])
+  mean(silhouette(clusters, dist(annotator_df))[, 3])
 })
 plot(2:10, sil_widths, type = "b", xlab = "Number of clusters", ylab = "Avg Silhouette Width")
 
 plot(hc, main = "Dendrogram of Hierarchical Clustering")
-abline(h = 1.2, col = "red", lty = 2) # 8 clusters
-abline(h = 12, col = "green", lty = 2) # 2 clusters
-# 8 is too big for our problem
-# Choosen: 2
+# 6 or 8 is too big for our problem
+# Choosen: 4
 
-clusters_2 <- cutree(hc, k = 2)
+clusters_2 <- cutree(hc, k = 4)
 
-res_hc <- cluster.stats(dist(yes_rate_df), clusters_2)
+res_hc <- cluster.stats(dist(annotator_df), clusters_2)
 res_hc$within.cluster.ss
 res_hc$avg.silwidth
 res_hc$ch  
@@ -163,14 +165,15 @@ res_hc$dunn
 # Stability
 
 clusterboot_result <- clusterboot(
-  dist(yes_rate_df), 
+  dist(annotator_df), 
   clustermethod = disthclustCBI,
-  method = "ward.D", 
-  k = 2,
+  method = "ward.D2", 
+  k = 4,
   B = 100
 )
 
 clusterboot_result$bootmean # mean Jaccard stability 
+# 0.7408048 0.8204264 0.7944817 0.6938201
 # 0.6815410 (borderline/moderately stable) 0.7446272 (moderately stable)
 # source: https://www.rdocumentation.org/packages/fpc/versions/2.2-13/topics/clusterboot on "Details"
 
