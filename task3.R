@@ -24,7 +24,7 @@ library(tidyr)
 # Initial Analysis
 # -------------------------------------------------------------------------------------------------------------------
 
-#load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task1.RData")
+load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task1.RData")
 load("/home/barbara/MDS/ATDS/DetectingTweetsSexism/variables/df_after_task1.RData")
 names(df)
 
@@ -81,7 +81,6 @@ plot_ly(
   mode = "markers"
 ) %>% layout(title = "3D PCA Clustering")
 
-annotator_df$cluster <- kmeans_result$cluster
 
 # -------------------------------------------------------------------------------------------------------------------
 # Evaluation 
@@ -94,16 +93,15 @@ res <- cluster.stats(dist(annotator_df), kmeans_result$cluster)
 res$within.cluster.ss # 1.420638 the lower the better (unbounded)
 
 res$avg.silwidth
-# silhouette score = mean = 0.5423015 -> good clustering, well-separated clusters with high cohesion
+# silhouette score mean 
 # Range: -1 to 1
 
 # Calinski-Harabasz (variance ratio) - the higher the better (unbounded)
-res$ch # 847.3658 
+res$ch
 
 # Dunn (separation/compactness ratio) - the higher the better (ubounded)
-res$dunn # 0.016
+res$dunn 
 
-# with k = 2 only silhouette is slightly better, therefore k = 3 is better overall
 
 # Stability
 
@@ -151,10 +149,10 @@ sil_widths <- sapply(2:10, function(k) {
 plot(2:10, sil_widths, type = "b", xlab = "Number of clusters", ylab = "Avg Silhouette Width")
 
 plot(hc, main = "Dendrogram of Hierarchical Clustering")
-# 6 or 8 is too big for our problem
-# Choosen: 4
+# 5, 7 or 8 is too big for our problem
+# Choosen: 5
 
-clusters_2 <- cutree(hc, k = 4)
+clusters_2 <- cutree(hc, k = 5)
 
 res_hc <- cluster.stats(dist(annotator_df), clusters_2)
 res_hc$within.cluster.ss
@@ -168,47 +166,35 @@ clusterboot_result <- clusterboot(
   dist(annotator_df), 
   clustermethod = disthclustCBI,
   method = "ward.D2", 
-  k = 4,
+  k = 5,
   B = 100
 )
 
 clusterboot_result$bootmean # mean Jaccard stability 
-# 0.7408048 0.8204264 0.7944817 0.6938201
-# 0.6815410 (borderline/moderately stable) 0.7446272 (moderately stable)
+# 0.7408048 (moderately stable)  0.8204264 (stable) 0.7944817 (stable) 0.6938201 (borderline/moderately stable)
 # source: https://www.rdocumentation.org/packages/fpc/versions/2.2-13/topics/clusterboot on "Details"
 
 # Visualization
 
-annotator_summary$hc_cluster <- factor(clusters_2)
-
-cluster_order_hc <- annotator_summary %>%
-  group_by(hc_cluster) %>%
-  summarize(max_rate = max(yes_rate)) %>%
-  arrange(max_rate) %>%
-  pull(hc_cluster)
-
-annotator_summary$hc_cluster <- factor(annotator_summary$hc_cluster, levels = cluster_order_hc)
-
-ggplot(annotator_summary, aes(x = yes_rate, fill = hc_cluster)) +
-  geom_histogram(bins = 30) +
-  labs(title = "Hierarchical Clustering: Annotators by Labeling Behavior", 
-       x = "Proportion of Sexist Labels", fill = "Cluster")
-
-aggregate(yes_rate ~ hc_cluster, data = annotator_summary, summary)
+fviz_cluster(list(data = annotator_df, cluster = clusters_2),
+             geom = "point",
+             ellipse.type = "convex") +
+  theme_minimal() +
+  ggtitle("Hierarchical Clustering with K = 5")
 
 # -------------------------------------------------------------------------------------------------------------------
-# Comparison hierarchical with 2 x kmeans with 3
+# Comparison hierarchical with 5 x kmeans with 4
 # -------------------------------------------------------------------------------------------------------------------
 
 # wss (compactness) - the lower the better
 res$within.cluster.ss
 res_hc$within.cluster.ss
-# kmeans wins
+# hc wins
 
 # silhouette - the higher the better
 res$avg.silwidth
 res_hc$avg.silwidth
-# kmeans wins
+# hc wins
 
 # Calinski-Harabasz (variance ratio) - the higher the better
 res$ch
@@ -218,248 +204,110 @@ res_hc$ch
 # Dunn (separation/compactness ratio) - the higher the better
 res$dunn
 res_hc$dunn
-# kmeans wins
+# tie
 
-# Stability: kmeans wins
+# Stability: hc wins
 
-# Chosen: k-means
+# Chosen: hc
 
 # -------------------------------------------------------------------------------------------------------------------
-# Relation with other variables (kmeans)
+# Relation with other variables (hc)
 # -------------------------------------------------------------------------------------------------------------------
 
 # Gender
 
-ggplot(annotator_summary, aes(x = cluster, fill = gender)) +
+annotator_df$cluster = clusters_2
+
+df_plot <- annotator_df
+
+reverse_ohe <- function(df, prefix) {
+  cols <- grep(paste0("^", prefix), names(df), value = TRUE)
+  values <- gsub(paste0("^", prefix), "", cols)
+  
+  values <- sub("^_", "", values)
+  
+  # Get index of the 1s in each row
+  idx <- apply(df[, cols], 1, function(row) {
+    match(1, row)
+  })
+  
+  # Create the new column
+  factor_col <- ifelse(is.na(idx), NA, values[idx])
+  
+  return(factor(factor_col, levels = values))
+}
+
+df_plot$cluster <- factor(df_plot$cluster)
+
+df_plot$country <- reverse_ohe(df_plot, "country")
+df_plot$gender <- reverse_ohe(df_plot, "gender")
+df_plot$ethnicity <- reverse_ohe(df_plot, "ethnicity")
+df_plot$age <- reverse_ohe(df_plot, "age")
+df_plot$education <- reverse_ohe(df_plot, "education")
+
+ggplot(df_plot, aes(x = cluster, fill = gender)) +
   geom_bar(position = "fill") +
   labs(title = "Gender Composition by Cluster", y = "Proportion", x = "Cluster") +
   theme_minimal()
 
-ggplot(annotator_summary, aes(x = gender, fill = cluster)) +
+ggplot(df_plot, aes(x = gender, fill = cluster)) +
   geom_bar(position = "fill") +
   labs(title = "Gender Composition by Cluster", y = "Proportion", x = "Gender") +
   theme_minimal()
 
-# Proportions of category by cluster
-
-subset <- annotator_summary[, c("gender", "cluster")]
-cluster_prop <- subset %>%
-  count(cluster, gender) %>%
-  group_by(gender) %>%
-  mutate(proportion = n / sum(n)) %>%
-  ungroup()
-prop_table <- cluster_prop %>%
-  select(cluster, gender, proportion) %>%
-  pivot_wider(
-    names_from = cluster,
-    values_from = proportion,
-    values_fill = 0
-  ) %>%
-  mutate(across(where(is.numeric), ~ round(.x, 2))) %>%
-  select(gender, "2", "1", "3") 
-print(prop_table)
 
 # Age
 
-ggplot(annotator_summary, aes(x = cluster, fill = age)) +
+ggplot(df_plot, aes(x = cluster, fill = age)) +
   geom_bar(position = "fill") +
   labs(title = "Age Composition by Cluster", y = "Proportion", x = "Cluster") +
   theme_minimal()
 
-ggplot(annotator_summary, aes(x = age, fill = cluster)) +
+ggplot(df_plot, aes(x = age, fill = cluster)) +
   geom_bar(position = "fill") +
   labs(title = "Cluster Composition by Age", y = "Proportion", x = "Age") +
   theme_minimal()
 
-subset <- annotator_summary[, c("age", "cluster")]
-cluster_prop <- subset %>%
-  count(cluster, age) %>%
-  group_by(age) %>%
-  mutate(proportion = n / sum(n)) %>%
-  ungroup()
-prop_table <- cluster_prop %>%
-  select(cluster, age, proportion) %>%
-  pivot_wider(
-    names_from = cluster,
-    values_from = proportion,
-    values_fill = 0
-  ) %>%
-  mutate(across(where(is.numeric), ~ round(.x, 2))) %>%
-  select(age, "2", "1", "3") 
-print(prop_table)
 
 # Education
 
-ggplot(annotator_summary, aes(x = cluster, fill = education)) +
+ggplot(df_plot, aes(x = cluster, fill = education)) +
   geom_bar(position = "fill") +
   labs(title = "Education Composition by Cluster", y = "Proportion", x = "Cluster") +
   theme_minimal()
 
-ggplot(annotator_summary, aes(x = education, fill = cluster)) +
+ggplot(df_plot, aes(x = education, fill = cluster)) +
   geom_bar(position = "fill") +
   labs(title = "Cluster Composition by Education", y = "Proportion", x = "Education") +
   theme_minimal()
 
-subset <- annotator_summary[, c("education", "cluster")]
-cluster_prop <- subset %>%
-  count(cluster, education) %>%
-  group_by(education) %>%
-  mutate(proportion = n / sum(n)) %>%
-  ungroup()
-prop_table <- cluster_prop %>%
-  select(cluster, education, proportion) %>%
-  pivot_wider(
-    names_from = cluster,
-    values_from = proportion,
-    values_fill = 0
-  ) %>%
-  mutate(across(where(is.numeric), ~ round(.x, 2))) %>%
-  select(education, "2", "1", "3") 
-print(prop_table)
 
 # Ethnicity
 
-ggplot(annotator_summary, aes(x = cluster, fill = ethnicity)) +
+ggplot(df_plot, aes(x = cluster, fill = ethnicity)) +
   geom_bar(position = "fill") +
   labs(title = "Ethnicity Composition by Cluster", y = "Proportion", x = "Cluster") +
   theme_minimal()  +
   scale_fill_brewer(palette = "Set1")
 
-ggplot(annotator_summary, aes(x = ethnicity, fill = cluster)) +
+ggplot(df_plot, aes(x = ethnicity, fill = cluster)) +
   geom_bar(position = "fill") +
   labs(title = "Cluster Composition by Ethnicity", y = "Proportion", x = "Ethnicity") +
   theme_minimal() 
 
-subset <- annotator_summary[, c("ethnicity", "cluster")]
-cluster_prop <- subset %>%
-  count(cluster, ethnicity) %>%
-  group_by(ethnicity) %>%
-  mutate(proportion = n / sum(n)) %>%
-  ungroup()
-prop_table <- cluster_prop %>%
-  select(cluster, ethnicity, proportion) %>%
-  pivot_wider(
-    names_from = cluster,
-    values_from = proportion,
-    values_fill = 0
-  ) %>%
-  mutate(across(where(is.numeric), ~ round(.x, 2))) %>%
-  select(ethnicity, "2", "1", "3") 
-print(prop_table)
-
 # Country 
 
 #  visualization gets hard (too much countries)
-ggplot(annotator_summary, aes(x = cluster, fill = country)) +
+ggplot(df_plot, aes(x = cluster, fill = country)) +
   geom_bar(position = "fill", color = "black") +
   labs(title = "Country Composition by Cluster", y = "Proportion", x = "Cluster") +
   theme_minimal()
 
-ggplot(annotator_summary, aes(x = country, fill = cluster)) +
+ggplot(df_plot, aes(x = country, fill = cluster)) +
   geom_bar(position = "fill", color = "black") +
   labs(title = "Cluster Composition by Country", y = "Proportion", x = "Country") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-subset <- annotator_summary[, c("country", "cluster")]
-
-country_cluster_prop <- subset %>%
-  count(cluster, country) %>%
-  group_by(country) %>%
-  mutate(proportion = n / sum(n)) %>%
-  ungroup()
-
-prop_table <- country_cluster_prop %>%
-  select(cluster, country, proportion) %>%
-  pivot_wider(
-    names_from = cluster,
-    values_from = proportion,
-    values_fill = 0
-  ) %>%
-  mutate(across(where(is.numeric), ~ round(.x, 2))) %>%
-  select(country, "2", "1", "3") 
-
-print(prop_table, n = 33)
 
 
-# -------------------------------------------------------------------------------------------------------------------
-# Using other variables
-# -------------------------------------------------------------------------------------------------------------------
-
-df_clust <- annotator_summary[,2:7]
-
-df_clust <- df_clust[,c('age','yes_rate')]
-
-df_clust <- dummy_cols(df_clust, remove_selected_columns = TRUE)
-
-names(df_clust)
-
-df_clust <- scale(df_clust)
-
-sum(is.na(df_clust))
-
-# Elbow method
-fviz_nbclust(df_clust, kmeans, method = "wss", k.max=15) + 
-  theme_minimal() + 
-  ggtitle("Elbow Method")
-
-# Silhouette method
-fviz_nbclust(df_clust, kmeans, method = "silhouette", k.max=15) + 
-  theme_minimal() + 
-  ggtitle("Silhouette Method")
-
-k <- 3
-kmeans_result <- kmeans(df_clust, centers = k, nstart = 25)
-
-# evaluation and visualization
-
-fviz_cluster(kmeans_result, data = df_clust, geom = "point", ellipse.type = "convex") + 
-  theme_minimal() +
-  ggtitle(paste("K-means Clustering with K = ", k))
-
-res <- cluster.stats(dist(df_clust), kmeans_result$cluster)
-res
-
-res$ch
-res$avg.silwidth
-res$dunn
-res$within.cluster.ss
-
-# columns for demographics: gender, age, ethnicity, education, country
-
-# 'yes_rate'                                k = 5     ch = 1243.016     silhouette = 0.56         dunn = 0.016      wss = 0.56
-# 'age','yes_rate'                          k = 3     ch = 533.7539     silhouette = 0.6613809    dunn = 0.5764527  wss = 339.014  visual = clean separation on 2D and 3D 
-# 'age', 'yes_rate', 'gender'               k = 6     ch = 352.8954     silhouette = 0.6459437    dunn = 0.5805406  wss = 338.026  visual = clean separation on 3D  
-# 'yes_rate', 'education'                   k = 6     ch = 421          silhouette = 0.6691562    dunn = 0.554855   wss = 339.0977  visual = clean on 3D
-# 'age','yes_rate', 'education'             k = 8     ch = 134.7966     silhouette = 0.5443515    dunn = 0.2699416  wss = 919.1509
-# 'age','yes_rate', 'education', 'gender'   k = 15(?) ch = 138.2857     silhouette = 0.5495702    dunn = 0.5065848  wss = 611.1114   
-# 'age','yes_rate', 'country'               k = 2(?)  ch = 20.87045     silhouette = 0.1227976    dunn = 0.1125445  wss = 12108.62 
-# 'country', 'yes_rate'                     no 'k' cant be found until k=15 by elbow method. using k = 12 chosen by silhouette -> bad results (ch = 16.31796, sil =  0.4780373, wss = 7689.906...)
-# 'yes_rate', 'gender'                      k = 5     ch = 948.6159     silhouette = 0.549411     dunn = 0.04347826 wss = 86.29997 visual = points along the same line but separated, whole variance explained by 2pcs
-# 'age','yes_rate', 'education', 'gender', 'ethnicity', 'country' k = 2(?) ch = 19  silhouette = 0.13 dunn = ... all bad. also with k = 15
-# 'yes_rate', 'ethnicity'                   k = 4     ch = 112.9379     silhouette = 0.68606     dunn = 0.1771895 wss = 1398.542  visual = overlapping on 2D and 3D (51% expl var on 3D)
-# 'yes_rate', 'ethnicity'                   k = 10 (elbow)   ch = 968.0862     silhouette = 0.5710186     dunn = 0.02631579 wss = 103.6693  visual = overlapping on 2D and 3D (51% expl var on 3D) (same)
-# 'age','yes_rate', 'ethnicity'             k = 13    ch = 320.1255    silhouette = 0.5489933     dunn = 0.02180598 wss = 306.1638
-
-# Visualizing 'age', 'yes_rate'
-df_clust <- df_clust[,c('age_18-22','age_23-45','age_46+','yes_rate')]
-df_clust <- scale(df_clust)
-k <- 3
-kmeans_result <- kmeans(df_clust, centers = k, nstart = 25)
-annotator_summary$cluster_multiple <- factor(kmeans_result$cluster)
-
-ggplot(annotator_summary, aes(x = cluster_multiple, fill = age)) +
-  geom_bar(position = "fill") +
-  labs(title = "Age Composition by Cluster", y = "Proportion", x = "Cluster") +
-  theme_minimal()
-
-ggplot(annotator_summary, aes(x = yes_rate, fill = cluster_multiple)) +
-  geom_histogram(bins = 30) +
-  labs(title = "Annotators Clustered by Labeling Behavior", x = "Proportion of Sexist Labels", fill = "Cluster")
-
-# -> useless bc maps age 3 categories directly to the 3 clusters. same happens to 'age', 'yes_rate' and 'gender' (each age perfectly mapped for 2 clusters)
-# the same might happen with education since there is 6 cat and k = 6
-
-# better just to use yes rate clustering alone
-
-### FINAL: clustering by yes_rate, k = 3 using K-means
