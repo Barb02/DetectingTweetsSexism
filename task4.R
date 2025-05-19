@@ -219,29 +219,7 @@ if (length(rules_intersect_count) > 0) inspect(head(rules_intersect_count, 10)) 
 # COLL0C_YES Impact Check
 # ==============================
 
-# PART 1 — Is colloc_yes alone a strong predictor?
-df_colloc <- df[, c("colloc_yes", "label_task1_1")]
-df_colloc[] <- lapply(df_colloc, as.factor)
-names(df_colloc) <- make.names(names(df_colloc), unique = TRUE)
-
-trans_colloc <- as(df_colloc, "transactions")
-
-rules_colloc <- apriori(trans_colloc,
-                        parameter = list(supp = 0.01, conf = 0.5, maxlen = 2))
-
-rule_colloc_yes <- subset(rules_colloc,
-                          lhs %pin% "colloc_yes=yes" & rhs %pin% "label_task1_1=YES")
-rule_colloc_yes <- sort(rule_colloc_yes, by = "lift", decreasing = TRUE)
-
-cat("\n Strength of rule: {colloc_yes = yes} => {label_task1_1 = YES}\n")
-if (length(rule_colloc_yes) > 0) {
-  inspect(rule_colloc_yes)
-} else {
-  cat("Rule not found.\n")
-}
-
-
-# PART 2 — Run Apriori without colloc_yes
+# Run Apriori without colloc_yes
 cat("\n Now discovering rules with colloc_yes removed...\n")
 
 # Remove colloc_yes from the preselected features
@@ -349,34 +327,6 @@ if (length(rules_basic_yes_count) > 0) {
   cat(" No strong rules by count.\n")
 }
 
-#-------------------------------------------------------------------------------------------
-
-#======================
-# Nao me lembro
-#======================
-
-df[binary_cols] <- lapply(df[binary_cols], function(x) factor(ifelse(x == 1, "yes", "no")))
-
-
-# Convert label to factor
-df$label_task1_1 <- as.factor(df$label_task1_1)
-
-# Subset relevant features for Apriori
-library(arules)
-selected <- c(binary_cols, "tweet_sentiment", "all_pos", "sadness", "sent_min", "disgust_max", "label_task1_1")
-df_apriori <- df[, selected]
-
-# Convert to transaction format
-trans <- as(df_apriori, "transactions")
-
-# Run Apriori algorithm
-rules <- apriori(trans, parameter = list(supp = 0.02, conf = 0.6))
-
-# View top rules by lift
-rules_sorted <- sort(rules, by = "lift", decreasing = TRUE)
-inspect(rules_sorted[1:15])
-
-
 
 #---------------------------------------------------------------------
 
@@ -480,7 +430,7 @@ trans_all <- as(df_combined, "transactions")
 
 # Mine rules
 rules_all_yes <- apriori(trans_all,
-                         parameter = list(supp = 0.02, conf = 0.7, maxlen = 4))
+                         parameter = list(supp = 0.02, conf = 0.5, maxlen = 4))
 
 # Filter rules for label = YES
 rules_all_yes <- subset(rules_all_yes, rhs %in% "label_task1_1=YES" & lift > 1)
