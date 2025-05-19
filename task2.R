@@ -23,7 +23,8 @@ library(corrplot)
 
 # -- To have the df without the count YES = NO tweets
 #load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task1.RData")
-load("/home/barbara/MDS/ATDS/DetectingTweetsSexism/variables/df_after_task1.RData")
+#load("/home/barbara/MDS/ATDS/DetectingTweetsSexism/variables/df_after_task1.RData")
+load("C:/Users/marta/OneDrive/Documentos/FCUP/TACD/project/DetectingTweetsSexism/variables/df_after_task1.RData")
 
 df <- df[ , 1:10]
 

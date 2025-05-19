@@ -24,8 +24,10 @@ library(tidyr)
 # Initial Analysis
 # -------------------------------------------------------------------------------------------------------------------
 
-load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task1.RData")
+#load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task1.RData")
 #load("/home/barbara/MDS/ATDS/DetectingTweetsSexism/variables/df_after_task1.RData")
+load("C:/Users/marta/OneDrive/Documentos/FCUP/TACD/project/DetectingTweetsSexism/variables/df_after_task1.RData")
+
 names(df)
 
 annotator_summary <- df %>%
@@ -245,7 +247,7 @@ cluster_prop <- subset %>%
   group_by(gender) %>%
   mutate(proportion = n / sum(n)) %>%
   ungroup()
-prop_table_gender <- cluster_prop %>%
+prop_table <- cluster_prop %>%
   select(cluster, gender, proportion) %>%
   pivot_wider(
     names_from = cluster,
@@ -254,9 +256,7 @@ prop_table_gender <- cluster_prop %>%
   ) %>%
   mutate(across(where(is.numeric), ~ round(.x, 2))) %>%
   select(gender, "2", "1", "3") 
-print(prop_table_gender)
-
-#save(prop_table_gender, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/prop_table_gender.RData")
+print(prop_table)
 
 # Age
 
@@ -276,7 +276,7 @@ cluster_prop <- subset %>%
   group_by(age) %>%
   mutate(proportion = n / sum(n)) %>%
   ungroup()
-prop_table_age <- cluster_prop %>%
+prop_table <- cluster_prop %>%
   select(cluster, age, proportion) %>%
   pivot_wider(
     names_from = cluster,
@@ -285,9 +285,7 @@ prop_table_age <- cluster_prop %>%
   ) %>%
   mutate(across(where(is.numeric), ~ round(.x, 2))) %>%
   select(age, "2", "1", "3") 
-print(prop_table_age)
-
-#save(prop_table_age, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/prop_table_age.RData")
+print(prop_table)
 
 # Education
 
@@ -307,7 +305,7 @@ cluster_prop <- subset %>%
   group_by(education) %>%
   mutate(proportion = n / sum(n)) %>%
   ungroup()
-prop_table_education <- cluster_prop %>%
+prop_table <- cluster_prop %>%
   select(cluster, education, proportion) %>%
   pivot_wider(
     names_from = cluster,
@@ -316,9 +314,7 @@ prop_table_education <- cluster_prop %>%
   ) %>%
   mutate(across(where(is.numeric), ~ round(.x, 2))) %>%
   select(education, "2", "1", "3") 
-print(prop_table_education)
-
-#save(prop_table_education, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/prop_table_education.RData")
+print(prop_table)
 
 # Ethnicity
 
@@ -339,7 +335,7 @@ cluster_prop <- subset %>%
   group_by(ethnicity) %>%
   mutate(proportion = n / sum(n)) %>%
   ungroup()
-prop_table_ethnicity <- cluster_prop %>%
+prop_table <- cluster_prop %>%
   select(cluster, ethnicity, proportion) %>%
   pivot_wider(
     names_from = cluster,
@@ -348,9 +344,7 @@ prop_table_ethnicity <- cluster_prop %>%
   ) %>%
   mutate(across(where(is.numeric), ~ round(.x, 2))) %>%
   select(ethnicity, "2", "1", "3") 
-print(prop_table_ethnicity)
-
-#save(prop_table_ethnicity, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/prop_table_ethnicity.RData")
+print(prop_table)
 
 # Country 
 
@@ -374,7 +368,7 @@ country_cluster_prop <- subset %>%
   mutate(proportion = n / sum(n)) %>%
   ungroup()
 
-prop_table_country <- country_cluster_prop %>%
+prop_table <- country_cluster_prop %>%
   select(cluster, country, proportion) %>%
   pivot_wider(
     names_from = cluster,
@@ -384,9 +378,8 @@ prop_table_country <- country_cluster_prop %>%
   mutate(across(where(is.numeric), ~ round(.x, 2))) %>%
   select(country, "2", "1", "3") 
 
-print(prop_table_country, n = 33)
+print(prop_table, n = 33)
 
-#save(prop_table_country, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/prop_table_country.RData")
 
 # -------------------------------------------------------------------------------------------------------------------
 # Using other variables
@@ -431,22 +424,6 @@ res$avg.silwidth
 res$dunn
 res$within.cluster.ss
 
-pca <- prcomp(df_clust, scale. = TRUE)
-pca_data <- as.data.frame(pca$x[, 1:3]) 
-pca_data$cluster <- as.factor(kmeans_result$cluster)
-summary(pca)
-
-plot_ly(
-  data = pca_data, 
-  x = ~PC1, 
-  y = ~PC2, 
-  z = ~PC3, 
-  color = ~cluster, 
-  colors = "Set1", 
-  type = "scatter3d", 
-  mode = "markers"
-) %>% layout(title = "3D PCA Clustering")
-
 # columns for demographics: gender, age, ethnicity, education, country
 
 # 'yes_rate'                                k = 5     ch = 1243.016     silhouette = 0.56         dunn = 0.016      wss = 0.56
@@ -464,8 +441,7 @@ plot_ly(
 # 'age','yes_rate', 'ethnicity'             k = 13    ch = 320.1255    silhouette = 0.5489933     dunn = 0.02180598 wss = 306.1638
 
 # Visualizing 'age', 'yes_rate'
-df_clust <- df_clust[,c('age', 'yes_rate')]
-df_clust <- dummy_cols(df_clust, remove_selected_columns = TRUE)
+df_clust <- df_clust[,c('age_18-22','age_23-45','age_46+','yes_rate')]
 df_clust <- scale(df_clust)
 k <- 3
 kmeans_result <- kmeans(df_clust, centers = k, nstart = 25)
