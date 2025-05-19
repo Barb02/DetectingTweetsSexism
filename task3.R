@@ -25,43 +25,41 @@ library(tidyr)
 # -------------------------------------------------------------------------------------------------------------------
 
 #load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task1.RData")
-#load("/home/barbara/MDS/ATDS/DetectingTweetsSexism/variables/df_after_task1.RData")
-load("C:/Users/marta/OneDrive/Documentos/FCUP/TACD/project/DetectingTweetsSexism/variables/df_after_task1.RData")
-
+load("/home/barbara/MDS/ATDS/DetectingTweetsSexism/variables/df_after_task1.RData")
 names(df)
 
 annotator_summary <- df %>%
-  group_by(annotator_id, gender, age, country, ethnicity, education) %>%
-  summarise(
-    yes_rate = mean(label_task1_1 == "YES"),
-    total_labeled = n()
-  ) # each row has a unique annotator
+  distinct(annotator_id, .keep_all = TRUE) %>%
+  select(gender, age, country, ethnicity, education)
+# each row has a unique annotator
 
-annotator_summary
+dim(annotator_summary)
 
-boxplot(annotator_summary$total_labeled)
+sum(is.na(annotator_summary))
 
-yes_rate_df = data.frame(yes_rate = annotator_summary$yes_rate)
+annotator_df <- dummy_cols(annotator_summary, remove_first_dummy = FALSE, remove_selected_columns = TRUE)
+
+names(annotator_df)
 
 # -------------------------------------------------------------------------------------------------------------------
 # K-means
 # -------------------------------------------------------------------------------------------------------------------
 
 # Elbow method
-fviz_nbclust(yes_rate_df, kmeans, method = "wss") + 
+fviz_nbclust(annotator_df, kmeans, method = "wss") + 
   theme_minimal() + 
   ggtitle("Elbow Method")
-# k = 3
+# k = 6
 
 # Silhouette method
-fviz_nbclust(yes_rate_df, kmeans, method = "silhouette") + 
+fviz_nbclust(annotator_df, kmeans, method = "silhouette") + 
   theme_minimal() + 
   ggtitle("Silhouette Method")
-# K = 2
+# K = 8, 10 or 4
 
-# Chosen: K = 3, aligns better with our needs
+# Chosen: K = 4, aligns better with our needs
 
-kmeans_result <- kmeans(yes_rate_df, centers = 3, nstart = 25)
+kmeans_result <- kmeans(annotator_df, centers = 4, nstart = 25)
 annotator_summary$cluster <- factor(kmeans_result$cluster)
 
 #save(kmeans_result, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/kmeans_model.RData")
