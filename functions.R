@@ -131,9 +131,11 @@ stats_emot_sent <- function(df) {
       disgust_max = max(disgust, na.rm = TRUE)
     )
   
-  df_final <- df %>%
-    left_join(df_tweet_level, by = "tweet") %>%
-    left_join(sentence_features, by = "tweet")
+  df_final <- suppressWarnings(
+    df %>%
+      left_join(df_tweet_level, by = "tweet") %>%
+      left_join(sentence_features, by = "tweet")
+  )
   
   return(df_final)
 }
