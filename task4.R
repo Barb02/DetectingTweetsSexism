@@ -219,7 +219,8 @@ if (length(rules_intersect_count) > 0) inspect(head(rules_intersect_count, 10)) 
 # COLL0C_YES Impact Check
 # ==============================
 
-# Run Apriori without colloc_yes
+
+# PART 2 — Run Apriori without colloc_yes
 cat("\n Now discovering rules with colloc_yes removed...\n")
 
 # Remove colloc_yes from the preselected features
@@ -327,6 +328,34 @@ if (length(rules_basic_yes_count) > 0) {
   cat(" No strong rules by count.\n")
 }
 
+#-------------------------------------------------------------------------------------------
+
+#======================
+# Nao me lembro
+#======================
+
+df[binary_cols] <- lapply(df[binary_cols], function(x) factor(ifelse(x == 1, "yes", "no")))
+
+
+# Convert label to factor
+df$label_task1_1 <- as.factor(df$label_task1_1)
+
+# Subset relevant features for Apriori
+library(arules)
+selected <- c(binary_cols, "tweet_sentiment", "all_pos", "sadness", "sent_min", "disgust_max", "label_task1_1")
+df_apriori <- df[, selected]
+
+# Convert to transaction format
+trans <- as(df_apriori, "transactions")
+
+# Run Apriori algorithm
+rules <- apriori(trans, parameter = list(supp = 0.02, conf = 0.6))
+
+# View top rules by lift
+rules_sorted <- sort(rules, by = "lift", decreasing = TRUE)
+inspect(rules_sorted[1:15])
+
+
 
 #---------------------------------------------------------------------
 
@@ -430,7 +459,7 @@ trans_all <- as(df_combined, "transactions")
 
 # Mine rules
 rules_all_yes <- apriori(trans_all,
-                         parameter = list(supp = 0.02, conf = 0.5, maxlen = 4))
+                         parameter = list(supp = 0.02, conf = 0.7, maxlen = 4))
 
 # Filter rules for label = YES
 rules_all_yes <- subset(rules_all_yes, rhs %in% "label_task1_1=YES" & lift > 1)
