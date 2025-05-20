@@ -65,6 +65,7 @@ fviz_cluster(kmeans_result, data = annotator_df, geom = "point", ellipse.type = 
   ggtitle(paste("K-means Clustering with K = 4"))
 
 #save(kmeans_result, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/kmeans_model.RData")
+#save(annotator_summary, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/annotatorsummary.RData")
 
 pca <- prcomp(annotator_df, scale. = TRUE)
 pca_data <- as.data.frame(pca$x[, 1:3]) 
@@ -312,6 +313,3 @@ ggplot(df_plot, aes(x = country, fill = cluster)) +
   labs(title = "Cluster Composition by Country", y = "Proportion", x = "Country") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-#save(annotator_df, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_mclust.RData")
-#save(annotator_summary, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/annotatorsummary.RData")

@@ -7,6 +7,8 @@
 
 library(fastDummies)
 source("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/functions.R")
+load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/kmeans_model.RData")
+load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/annotatorsummary.RData")
 
 # For Train
 #df = read_csv("/home/barbara/MDS/ATDS/DetectingTweetsSexism/tables/EXIST2025_train.csv")
@@ -92,37 +94,17 @@ df <- cbind(df, df_dummies)
 # Task 3
 # -------------------------------------------------------------------------------------------------------------------
 
-load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_mclust.RData")
-load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/annotatorsummary.RData")
+clustered_data <- predict_cluster_kmeans(df, kmeans_result, annotator_summary)
+print(clustered_data)
 
-c <- annotator_df$cluster
-annotator_df <- subset(annotator_df, select = -cluster)
+df <- cbind(df, clustered_data$cluster)
 
-df3 <- df[, 5:9]
-# Defina os níveis originais (do dataset completo)
-levels_gender <- levels(factor(annotator_summary$gender))
-levels_country <- levels(factor(annotator_summary$country))
-levels_ethnicity <- levels(factor(annotator_summary$ethnicity))
-levels_education <- levels(factor(annotator_summary$education))
-levels_age <- levels(factor(annotator_summary$age))
+df_dummies2 <- dummy_cols(df[, 42], remove_first_dummy = TRUE, remove_selected_columns = TRUE)
+names(df_dummies2)[names(df_dummies2) == ".data_2"] <- "cluster2"
+names(df_dummies2)[names(df_dummies2) == ".data_3"] <- "cluster3"
+names(df_dummies2)[names(df_dummies2) == ".data_4"] <- "cluster4"
 
-# Aplique esses níveis em df3 antes do model.matrix:
-df3$gender <- factor(df3$gender, levels = levels_gender)
-df3$country <- factor(df3$country, levels = levels_country)
-df3$ethnicity <- factor(df3$ethnicity, levels = levels_ethnicity)
-df3$education <- factor(df3$education, levels = levels_education)
-df3$age <- factor(df3$age, levels = levels_age)
-
-levels_list <- lapply(annotator_summary, function(x) {
-  if (is.factor(x) || is.character(x)) {
-    levels(as.factor(x))
-  } else {
-    NULL
-  }
-})
-levels_list <- levels_list[!sapply(levels_list, is.null)]
-
-t3 <- predict_hclust(df3, annotator_df, c, levels_list)
+df <- cbind(df, df_dummies2)
 
 #save(df, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task_2_3.RData")
 
@@ -132,18 +114,14 @@ t3 <- predict_hclust(df3, annotator_df, c, levels_list)
 
 #load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/dfval_after_task_2_3.RData")
 
-#write.csv(df, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/trainfinal.csv", row.names = FALSE)
-write.csv(df, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/valfinal.csv", row.names = FALSE)
-
 # -------------------------------------------------------------------------------------------------------------------
 # Task 4
 # -------------------------------------------------------------------------------------------------------------------
 
 
-# -------------------------------------------------------------------------------------------------------------------
-# Task 5
-# -------------------------------------------------------------------------------------------------------------------
 
+#write.csv(df, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/trainfinal.csv", row.names = FALSE)
+#write.csv(df, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/valfinal.csv", row.names = FALSE)
 
 
 
