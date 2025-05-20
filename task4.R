@@ -14,7 +14,10 @@ library(ggplot2)
 #load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task_2_3.RData")
 load("C:/Users/marta/OneDrive/Documentos/FCUP/TACD/project/DetectingTweetsSexism/variables/df_after_task_2_3.RData")
 
-df <- df[, 5:41]
+df <- df[, 5:42]
+
+write.csv(df, file = "C:/Users/marta/OneDrive/Documentos/FCUP/TACD/project/DetectingTweetsSexism/variables/df_after_task_2_3.csv", row.names = FALSE)
+
 
 # -------------------------------------------------------------------------------------------------------------------
 # Association Rules
@@ -27,6 +30,52 @@ names(df) <- gsub("[- ]", "_", names(df))          # dashes & spaces → _
 names(df) <- make.names(names(df), unique = TRUE)  # make valid R names
 
 df$label_task1_1 <- as.factor(df$label_task1_1)
+
+
+#=================================
+# Whith clusters
+#=================================
+
+
+#-------------------------------------------
+
+#=========================
+# Just whith clusters
+#==========================
+
+# Select relevant columns and ensure correct types
+df_rules <- df[, c("clustered_data.cluster", "label_task1_1")]
+colnames(df_rules)[colnames(df_rules) == "clustered_data.cluster"] <- "cluster"
+
+# Convert to factors
+df_rules[] <- lapply(df_rules, as.factor)
+
+# Convert to transactions
+trans <- as(df_rules, "transactions")
+
+# Run Apriori: lower thresholds to catch even weak cluster rules
+rules <- apriori(trans, parameter = list(supp = 0.01, conf = 0.1, target = "rules"))
+
+# Filter: only rules where LHS is cluster and RHS is label
+cluster_rules <- subset(rules, 
+                        lhs %pin% "cluster=" & 
+                          rhs %in% c("label_task1_1=YES", "label_task1_1=NO"))
+
+# Show all available cluster → label rules, or as many as exist
+sorted_cluster_rules <- sort(cluster_rules, by = "confidence", decreasing = TRUE)
+inspect(head(sorted_cluster_rules, n = min(10, length(sorted_cluster_rules))))
+
+# cluster 4 = NO
+# cluster 5 = N0
+
+
+
+
+
+
+
+
+
 
 
 # ==============================
@@ -68,6 +117,7 @@ df_arm$sadness         <- ifelse(df$sadness > median(df$sadness), "sadness_high"
 df_arm$sent_min        <- ifelse(df$sent_min > median(df$sent_min), "sent_min_high", "sent_min_low")
 df_arm$disgust_max     <- ifelse(df$disgust_max > median(df$disgust_max), "disgust_high", "disgust_low")
 
+#------------------------------------------------
 df_arm <- df_arm[, c(preselected, "label_task1_1")]
 names(df_arm) <- make.names(names(df_arm), unique = TRUE)
 
@@ -211,6 +261,37 @@ if (length(rules_intersect_count) > 0) inspect(head(rules_intersect_count, 10)) 
 #tried with rules_no but there weren't any rules ("default" label, more varience)
 
 
+
+
+#====================================
+# cluster + our personalized features
+#====================================
+
+# Remove demographic and original label columns
+exclude_cols <- c("gender", "age", "ethnicity", "education", "colloc_yes", "colloc_no", "word_women", "word_men", "country", "label_task1_1")
+df_arm_filtered <- df_arm[, !(names(df_arm) %in% exclude_cols)]
+
+# Add the label back just for rule mining
+df_arm_filtered$label <- as.factor(df$label_task1_1)
+
+# Ensure everything is a factor
+df_arm_filtered[] <- lapply(df_arm_filtered, as.factor)
+
+# Convert to transactions
+trans <- as(df_arm_filtered, "transactions")
+
+# Run Apriori algorithm
+rules <- apriori(trans, parameter = list(supp = 0.01, conf = 0.7, target = "rules"))
+
+# Filter: rules that predict label YES or NO
+label_rules <- subset(rules, rhs %in% c("label=YES", "label=NO"))
+
+# Sort and inspect
+inspect(sort(label_rules, by = "confidence", decreasing = TRUE)[1:20])
+
+
+
+
 #_____________________________________________________________
 
 
@@ -224,7 +305,7 @@ if (length(rules_intersect_count) > 0) inspect(head(rules_intersect_count, 10)) 
 cat("\n Now discovering rules with colloc_yes removed...\n")
 
 # Remove colloc_yes from the preselected features
-preselected_no_colloc <- setdiff(preselected, "colloc_yes")
+preselected_no_colloc <- setdiff(preselected, c("colloc_yes", "word_women"))
 
 # Prepare a fresh df_arm without colloc_yes
 df_arm_nocolloc <- df
@@ -292,7 +373,6 @@ names(df_basic) <- make.names(names(df_basic), unique = TRUE)
 # ==============================
 # Step 3: Convert to Transactions
 # ==============================
-library(arules)
 trans_basic <- as(df_basic, "transactions")
 
 # ==============================
