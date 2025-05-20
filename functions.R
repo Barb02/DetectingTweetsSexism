@@ -141,65 +141,47 @@ stats_emot_sent <- function(df) {
 }
 
 # -------------------------------------------------------------------------------------------------------------------
-# Function to assign add proportions based on annotators characteristics
+# Function to assign clusters based on annotators characteristics
 # -------------------------------------------------------------------------------------------------------------------
 
-add_proportions <- function(df, 
-                            prop_table_age, 
-                            prop_table_education,
-                            prop_table_gender,
-                            prop_table_ethnicity,
-                            prop_table_country) {
-  
-  # Inicializar colunas "1", "2", "3" com zero
-  df$`1` <- 0
-  df$`2` <- 0
-  df$`3` <- 0
-  
-  for (i in seq_len(nrow(df))) {
-    
-    # AGE
-    age_row <- prop_table_age[prop_table_age$age == df$age[i], ]
-    if (nrow(age_row) == 1) {
-      df$`1`[i] <- df$`1`[i] + age_row$`1`
-      df$`2`[i] <- df$`2`[i] + age_row$`2`
-      df$`3`[i] <- df$`3`[i] + age_row$`3`
-    }
-    
-    # EDUCATION
-    edu_row <- prop_table_education[prop_table_education$education == df$education[i], ]
-    if (nrow(edu_row) == 1) {
-      df$`1`[i] <- df$`1`[i] + edu_row$`1`
-      df$`2`[i] <- df$`2`[i] + edu_row$`2`
-      df$`3`[i] <- df$`3`[i] + edu_row$`3`
-    }
-    
-    # GENDER
-    gender_row <- prop_table_gender[prop_table_gender$gender == df$gender[i], ]
-    if (nrow(gender_row) == 1) {
-      df$`1`[i] <- df$`1`[i] + gender_row$`1`
-      df$`2`[i] <- df$`2`[i] + gender_row$`2`
-      df$`3`[i] <- df$`3`[i] + gender_row$`3`
-    }
-    
-    # ETHNICITY
-    eth_row <- prop_table_ethnicity[prop_table_ethnicity$ethnicity == df$ethnicity[i], ]
-    if (nrow(eth_row) == 1) {
-      df$`1`[i] <- df$`1`[i] + eth_row$`1`
-      df$`2`[i] <- df$`2`[i] + eth_row$`2`
-      df$`3`[i] <- df$`3`[i] + eth_row$`3`
-    }
-    
-    # COUNTRY
-    country_row <- prop_table_country[prop_table_country$country == df$country[i], ]
-    if (nrow(country_row) == 1) {
-      df$`1`[i] <- df$`1`[i] + country_row$`1`
-      df$`2`[i] <- df$`2`[i] + country_row$`2`
-      df$`3`[i] <- df$`3`[i] + country_row$`3`
+predict_hclust <- function(new_data, reference_df, cluster_labels, levels_list) {
+  # Ajustar fatores para terem os mesmos níveis do dataset original
+  for (varname in names(levels_list)) {
+    if (varname %in% colnames(new_data)) {
+      new_data[[varname]] <- factor(new_data[[varname]], levels = levels_list[[varname]])
     }
   }
   
-  return(df)
+  # One-hot encoding igual ao usado em reference_df
+  vars <- colnames(reference_df)
+  new_data_ohe <- model.matrix(~ . - 1, data = new_data)
+  
+  # Garantir que colunas estejam na mesma ordem e estrutura
+  common_cols <- intersect(colnames(new_data_ohe), vars)
+  new_data_ohe_aligned <- matrix(0, nrow = nrow(new_data), ncol = length(vars))
+  colnames(new_data_ohe_aligned) <- vars
+  rownames(new_data_ohe_aligned) <- rownames(new_data)
+  
+  new_data_ohe_aligned[, common_cols] <- new_data_ohe[, common_cols]
+  
+  # Função para calcular distância média até cada cluster
+  assign_cluster <- function(point) {
+    dists <- sapply(unique(cluster_labels), function(k) {
+      members <- reference_df[cluster_labels == k, ]
+      mean(sqrt(rowSums((t(t(members) - point))^2)))
+    })
+    which.min(dists)
+  }
+  
+  # Aplicar para cada nova observação
+  assigned_clusters <- apply(new_data_ohe_aligned, 1, assign_cluster)
+  
+  # One-hot encode dos clusters atribuídos
+  cluster_ohe <- model.matrix(~ factor(assigned_clusters) - 1)
+  colnames(cluster_ohe) <- paste0("cluster_", sort(unique(cluster_labels)))
+  
+  result <- cbind(new_data, cluster = assigned_clusters, cluster_ohe)
+  return(result)
 }
 
 
