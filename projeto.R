@@ -112,13 +112,22 @@ df <- cbind(df, df_dummies2)
 
 #save(df, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/dfval_after_task_2_3.RData")
 
-#load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/dfval_after_task_2_3.RData")
+load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/dfval_after_task_2_3.RData")
 
 # -------------------------------------------------------------------------------------------------------------------
 # Task 4
 # -------------------------------------------------------------------------------------------------------------------
 
+# Using the rule confidence of cluster X -> YES label, we created a new collumn 
 
+names(df)[names(df) == "clustered_data$cluster"] <- "cluster"
+
+df$ru_conf <- ifelse(df$cluster == 1, 0.4363751,
+                        ifelse(df$cluster == 2, 0.4238484,
+                        ifelse(df$cluster == 3, 0.3949825,
+                        ifelse(df$cluster == 4, 0.3722572, NA))))
+
+df <- df[, !(names(df) %in% c("cluster", "cluster2", "cluster3", "cluster4"))]
 
 #write.csv(df, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/trainfinal.csv", row.names = FALSE)
 #write.csv(df, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/valfinal.csv", row.names = FALSE)
