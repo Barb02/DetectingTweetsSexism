@@ -24,8 +24,8 @@ library(purrr)
 # Initial Analysis
 # -------------------------------------------------------------------------------------------------------------------
 
-df = read_csv("/home/barbara/MDS/ATDS/DetectingTweetsSexism/tables/EXIST2025_train.csv")
-#df = read_csv("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/EXIST2025_train.csv")
+#df = read_csv("/home/barbara/MDS/ATDS/DetectingTweetsSexism/tables/EXIST2025_train.csv")
+df = read_csv("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/EXIST2025_train.csv")
 #df = read_csv("C:/Users/marta/OneDrive/Documentos/FCUP/TACD/project/DetectingTweetsSexism/tables/EXIST2025_train.csv")
 
 str(df)
@@ -105,7 +105,7 @@ dfm_no <- dfm_subset(dfm_tfidf, df$final_label == "NO")
 
 # -- Extract the top features for each --
 
-top_yes <- topfeatures(dfm_yes, 30)
+top_yes <- topfeatures(dfm_yes, 20)
 top_no <- topfeatures(dfm_no, 20)
 
 top_yes
