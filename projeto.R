@@ -11,54 +11,54 @@ load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsS
 load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/annotatorsummary.RData")
 
 # For Train
-#df = read_csv("/home/barbara/MDS/ATDS/DetectingTweetsSexism/tables/EXIST2025_train.csv")
-#df = read_csv("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/EXIST2025_train.csv")
-#df = read_csv("C:/Users/marta/OneDrive/Documentos/FCUP/TACD/project/DetectingTweetsSexism/tables/EXIST2025_train.csv")
+df = read_csv("/home/barbara/MDS/ATDS/DetectingTweetsSexism/tables/EXIST2025_train.csv")
+df = read_csv("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/EXIST2025_train.csv")
+df = read_csv("C:/Users/marta/OneDrive/Documentos/FCUP/TACD/project/DetectingTweetsSexism/tables/EXIST2025_train.csv")
 
 # For DVLABELED
-#df = read_csv("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/EXIST2025_dev_labeled.csv")
-#names(df)[names(df) == "age_group"] <- "age"
-#names(df)[names(df) == "annotator"] <- "annotator_id"
-#names(df)[names(df) == "study_level"] <- "education"
+df = read_csv("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/EXIST2025_dev_labeled.csv")
+names(df)[names(df) == "age_group"] <- "age"
+names(df)[names(df) == "annotator"] <- "annotator_id"
+names(df)[names(df) == "study_level"] <- "education"
 
 # -------------------------------------------------------------------------------------------------------------------
 # Task 1
 # -------------------------------------------------------------------------------------------------------------------
 
 # For train
-#df <- df %>%
-#  group_by(tweet) %>%
-#  summarise(
-#    count_yes = sum(label_task1_1 == "YES", na.rm = TRUE),
-#    count_no = sum(label_task1_1 == "NO", na.rm = TRUE)
-#  ) %>%
-#  filter(count_yes != count_no) %>%
-#  mutate(final_label = ifelse(count_yes > count_no, "YES", "NO"))
-#df <- df %>%  select(tweet, final_label)
+df2 <- df %>%
+  group_by(tweet) %>%
+  summarise(
+    count_yes = sum(label_task1_1 == "YES", na.rm = TRUE),
+    count_no = sum(label_task1_1 == "NO", na.rm = TRUE)
+  ) %>%
+  filter(count_yes != count_no) %>%
+  mutate(final_label = ifelse(count_yes > count_no, "YES", "NO"))
+df2 <- df2 %>%  select(tweet, final_label)
 
 # For labeled
-#names(df)[names(df) == "gender"] <- "gender.x"
+names(df)[names(df) == "gender"] <- "gender.x"
 
-#df <- important_words(df, tweet_col = "tweet")
-#df <- coloc(df)
-#df <- sent_seq(df)
-#df <- stats_emot_sent(df)
+df2 <- important_words(df2, tweet_col = "tweet")
+df2 <- coloc(df2)
+df2 <- sent_seq(df2)
+df2 <- stats_emot_sent(df2)
 
 # For train
-#df <- df %>%
-#  left_join(df, by = "tweet")
+df <- df %>%
+  left_join(df2, by = "tweet")
 
 # For labeled
-#names(df)[11:20] <- paste0("word_", names(df)[11:20])
-#names(df)[names(df) == "gender.x"] <- "gender"
+names(df)[11:20] <- paste0("word_", names(df)[11:20])
+names(df)[names(df) == "gender.x"] <- "gender"
 
 #For train
 # -- Cut the lines that have NAs which are the lines that contain Yes = No 
-#df <- na.omit(df)
-#df <- subset(df, select = -final_label)
-#names(df)[names(df) == "gender.x"] <- "gender"
-#names(df)[11:20] <- paste0("word_", names(df)[11:20])
-#names(df)[names(df) == "word_gender.y"] <- "word_gender"
+df <- na.omit(df)
+df <- subset(df, select = -final_label)
+names(df)[names(df) == "gender.x"] <- "gender"
+names(df)[11:20] <- paste0("word_", names(df)[11:20])
+names(df)[names(df) == "word_gender.y"] <- "word_gender"
 
 
 #save(df, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task1.RData")
@@ -69,7 +69,7 @@ load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsS
 
 #load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/dfval_after_task1.RData")
 
-#write.csv(df, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/dftrain_after_task1.csv", row.names = FALSE)
+#write.csv(df2, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/task1.csv", row.names = FALSE)
 
 # -------------------------------------------------------------------------------------------------------------------
 # Task 2
