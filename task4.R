@@ -16,7 +16,7 @@ load("C:/Users/marta/OneDrive/Documentos/FCUP/TACD/project/DetectingTweetsSexism
 
 df <- df[, 5:42]
 
-write.csv(df, file = "C:/Users/marta/OneDrive/Documentos/FCUP/TACD/project/DetectingTweetsSexism/variables/df_after_task_2_3.csv", row.names = FALSE)
+#write.csv(df, file = "C:/Users/marta/OneDrive/Documentos/FCUP/TACD/project/DetectingTweetsSexism/variables/df_after_task_2_3.csv", row.names = FALSE)
 
 
 # -------------------------------------------------------------------------------------------------------------------
@@ -30,11 +30,6 @@ names(df) <- gsub("[- ]", "_", names(df))          # dashes & spaces → _
 names(df) <- make.names(names(df), unique = TRUE)  # make valid R names
 
 df$label_task1_1 <- as.factor(df$label_task1_1)
-
-
-#=================================
-# Whith clusters
-#=================================
 
 
 #-------------------------------------------
@@ -316,8 +311,6 @@ df_arm_nocolloc[binary_cols_nocolloc] <- lapply(df_arm_nocolloc[binary_cols_noco
 
 # Discretize numeric variables again
 df_arm_nocolloc$tweet_sentiment <- ifelse(df$tweet_sentiment > median(df$tweet_sentiment), "sentiment_high", "sentiment_low")
-df_arm_nocolloc$all_pos         <- ifelse(df$all_pos > median(df$all_pos), "pos_high", "pos_low")
-df_arm_nocolloc$all_neg         <- ifelse(df$all_neg > median(df$all_neg), "neg_high", "neg_low")
 df_arm_nocolloc$sadness         <- ifelse(df$sadness > median(df$sadness), "sadness_high", "sadness_low")
 df_arm_nocolloc$sent_min        <- ifelse(df$sent_min > median(df$sent_min), "sent_min_high", "sent_min_low")
 df_arm_nocolloc$disgust_max     <- ifelse(df$disgust_max > median(df$disgust_max), "disgust_high", "disgust_low")
