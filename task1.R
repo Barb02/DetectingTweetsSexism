@@ -368,6 +368,12 @@ sequence_df_filtered <- fastDummies::dummy_cols(sequence_df_filtered, select_col
 sequence_with_label <- left_join(sequence_df_filtered, df[, c("tweet", "final_label")], by = "tweet")
 sequence_with_label$final_label <- ifelse(sequence_with_label$final_label == "YES", 1, 0)
 
+# -- Correlation --
+sequence_cols <- grep("^sequence_id_", colnames(sequence_with_label), value = TRUE)
+sequence_corr <- sapply(sequence_with_label[, sequence_cols], function(x) cor(x, sequence_with_label$final_label))
+sequence_corr <- sort(sequence_corr[order(abs(sequence_corr), decreasing = TRUE)])
+print(sequence_corr)
+
 # -- Distribution -- 
 sequence_label_dist <- sequence_with_label %>%
   group_by(sentiment_sequence, final_label) %>%
@@ -425,6 +431,8 @@ pattern_df <- fastDummies::dummy_cols(pattern_df, select_columns = "pattern_type
 pattern_with_label <- left_join(pattern_df, df[, c("tweet", "final_label")], by = "tweet")
 pattern_with_label$final_label <- ifelse(pattern_with_label$final_label == "YES", 1, 0)
 
+pattern_cols <- grep("^pattern_type_", colnames(pattern_with_label), value = TRUE)
+
 # -- Distribution --
 pattern_with_label$pattern_type_name <- apply(
   pattern_with_label[, pattern_cols],
@@ -447,9 +455,8 @@ pattern_label_dist <- pattern_with_label %>%
   arrange(desc(YES + NO))
 print(pattern_label_dist)
 
-# Considering the distribution across the labels we've decided to had the 
+# Considering both the correlation and the distribution across the labels we've decided to had the 
 # following features to our data set: all negative and all positive
-
 # -------------------------------------------------------------------------------------------------------------------
 # Function used to create the features based on the conclusions taken from sentiment analysis Part 1
 # -------------------------------------------------------------------------------------------------------------------
@@ -777,15 +784,5 @@ print(result)
 # -------------------------------------------------------------------------------------------------------------------
 
 write.csv(df_final, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/task1.csv", row.names = FALSE)
-
-
-
-
-
-
-
-
-
-
 
 
