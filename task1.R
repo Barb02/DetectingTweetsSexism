@@ -267,11 +267,14 @@ df <- coloc(df)
 # Correlations for Yes and No tweets
 # -------------------------------------------------------------------------------------------------------------------
 
-dfm_yes_trim <- dfm_trim(dfm_yes, min_termfreq = 10)
-dfm_no_trim <- dfm_trim(dfm_no, min_termfreq = 10)
+dfm_yes2 <- dfm(toks_yes)
+dfm_no2 <- dfm(toks_no)
 
-correlations_yes <- textstat_simil(dfm_yes_trim, margin = "features", method = "correlation")
-correlations_no <- textstat_simil(dfm_no_trim, margin = "features", method = "correlation")
+dfm_yes_trimmed <- dfm_trim(dfm_yes2, min_termfreq = 10)
+dfm_no_trimmed <- dfm_trim(dfm_no2, min_termfreq = 10)
+
+correlations_yes <- textstat_simil(dfm_yes_trimmed, margin = "features", method = "correlation")
+correlations_no <- textstat_simil(dfm_no_trimmed, margin = "features", method = "correlation")
 
 corr_list_yes <- as.list(correlations_yes)
 corr_list_no <- as.list(correlations_no)
@@ -428,11 +431,7 @@ pattern_df <- fastDummies::dummy_cols(pattern_df, select_columns = "pattern_type
 pattern_with_label <- left_join(pattern_df, df[, c("tweet", "final_label")], by = "tweet")
 pattern_with_label$final_label <- ifelse(pattern_with_label$final_label == "YES", 1, 0)
 
-# -- Correlation --
 pattern_cols <- grep("^pattern_type_", colnames(pattern_with_label), value = TRUE)
-pattern_corr <- sapply(pattern_with_label[, pattern_cols], function(x) cor(x, pattern_with_label$final_label))
-pattern_corr <- sort(pattern_corr[order(abs(pattern_corr), decreasing = TRUE)])
-print(pattern_corr)
 
 # -- Distribution --
 pattern_with_label$pattern_type_name <- apply(
@@ -458,7 +457,6 @@ print(pattern_label_dist)
 
 # Considering both the correlation and the distribution across the labels we've decided to had the 
 # following features to our data set: all negative and all positive
-
 # -------------------------------------------------------------------------------------------------------------------
 # Function used to create the features based on the conclusions taken from sentiment analysis Part 1
 # -------------------------------------------------------------------------------------------------------------------
@@ -538,10 +536,7 @@ emotion_seq_df <- fastDummies::dummy_cols(emotion_seq_df, select_columns = "emot
 emotion_seq_df <- left_join(emotion_seq_df, df[, c("tweet", "final_label")], by = "tweet")
 emotion_seq_df$final_label <- ifelse(emotion_seq_df$final_label == "YES", 1, 0)
 
-# -- Correlation -- 
 emotion_cols_dummy <- grep("^emotion_sequence_", colnames(emotion_seq_df), value = TRUE)
-emotion_seq_corr <- sapply(emotion_seq_df[, emotion_cols_dummy], function(x) cor(x, emotion_seq_df$final_label))
-emotion_seq_corr <- emotion_seq_corr[order(abs(emotion_seq_corr), decreasing = TRUE)]
 
 multi_emotion_cols <- emotion_cols_dummy[
   sapply(emotion_cols_dummy, function(col) {
@@ -549,8 +544,6 @@ multi_emotion_cols <- emotion_cols_dummy[
     return(n_emotions > 1)
   })
 ]
-
-print(emotion_seq_corr[multi_emotion_cols])
 
 # -- Distribution --
 
@@ -791,15 +784,5 @@ print(result)
 # -------------------------------------------------------------------------------------------------------------------
 
 write.csv(df_final, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/task1.csv", row.names = FALSE)
-
-
-
-
-
-
-
-
-
-
 
 
