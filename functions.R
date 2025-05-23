@@ -20,6 +20,7 @@ library(gridExtra)
 library(corrplot)
 library(purrr)
 library(fastDummies)
+library(caret)
 load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/top_collocs_yes_2.RData")
 load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/top_collocs_no_2.RData")
 
@@ -182,7 +183,65 @@ predict_cluster_kmeans <- function(new_data, kmeans_model, reference_data) {
   return(new_data)
 }
 
+# -------------------------------------------------------------------------------------------------------------------
+# Function to assign confidence based on characteristics of the annotator
+# -------------------------------------------------------------------------------------------------------------------
 
+compute_conf_column <- function(df_train_train, df_train_new) {
+  demog_cols <- c("gender", "age", "ethnicity", "education", "country")
+  
+  df_train_train$profile_key <- apply(df_train_train[, demog_cols], 1, paste, collapse = "|")
+  df_train_train$profile_key <- as.character(df_train_train$profile_key)
+  
+  profile_yes <- table(df_train_train$profile_key[df_train_train$label_task1_1 == "YES"])
+  profile_total <- table(df_train_train$profile_key)
+  
+  profile_conf <- mapply(function(key) {
+    yes_count <- ifelse(!is.na(profile_yes[key]), profile_yes[key], 0)
+    total_count <- profile_total[key]
+    round(yes_count / total_count, 4)
+  }, names(profile_total))
+  names(profile_conf) <- names(profile_total)
+  
+  df_train_new$profile_key <- apply(df_train_new[, demog_cols], 1, paste, collapse = "|")
+  df_train_new$profile_key <- as.character(df_train_new$profile_key)
+  
+  df_train_new$Conf <- ifelse(df_train_new$profile_key %in% names(profile_conf),
+                              profile_conf[df_train_new$profile_key],
+                              NA)
+  
+  if (any(is.na(df_train_new$Conf))) {
+    dummies <- dummyVars(~ ., data = df_train_train[, demog_cols])
+    train_matrix <- predict(dummies, newdata = df_train_train[, demog_cols])
+    new_matrix <- predict(dummies, newdata = df_train_new[, demog_cols])  # <- CORRIGIDO
+    new_matrix <- as.data.frame(new_matrix)
+    train_matrix <- as.data.frame(train_matrix)
+    
+    missing_cols <- setdiff(colnames(train_matrix), colnames(new_matrix))
+    for (col in missing_cols) {
+      new_matrix[[col]] <- 0
+    }
+    new_matrix <- new_matrix[, colnames(train_matrix)]
+    
+    train_conf <- df_train_train$profile_key
+    train_conf_values <- sapply(train_conf, function(k) profile_conf[[k]])
+    
+    known_idx <- which(!is.na(train_conf_values))
+    unknown_idx <- which(is.na(df_train_new$Conf))
+    
+    known_matrix <- train_matrix[known_idx, ]
+    unknown_matrix <- new_matrix[unknown_idx, ]
+    
+    dist_mat <- as.matrix(dist(rbind(unknown_matrix, known_matrix)))
+    n_unknown <- nrow(unknown_matrix)
+    d <- dist_mat[1:n_unknown, (n_unknown + 1):nrow(dist_mat)]
+    
+    nearest_idx <- apply(d, 1, which.min)
+    df_train_new$Conf[unknown_idx] <- train_conf_values[known_idx][nearest_idx]
+  }
+  
+  return(df_train_new)
+}
 
 
 
