@@ -23,8 +23,8 @@ library(tidyr)
 # Initial Analysis
 # -------------------------------------------------------------------------------------------------------------------
 
-load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task1.RData")
-#load("/home/barbara/MDS/ATDS/DetectingTweetsSexism/variables/df_after_task1.RData")
+#load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task1.RData")
+load("/home/barbara/MDS/ATDS/DetectingTweetsSexism/variables/df_after_task1.RData")
 names(df)
 
 annotator_summary <- df %>%
@@ -63,14 +63,18 @@ kmeans_result <- kmeans(annotator_df, centers = 4, nstart = 25)
 fviz_cluster(kmeans_result, data = annotator_df, geom = "point", ellipse.type = "convex") + 
   theme_minimal() +
   ggtitle(paste("K-means Clustering with K = 4"))
+# Only 12.3% is represented by the 2 components, visualization not reliable to assess separability
 
 #save(kmeans_result, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/kmeans_model.RData")
 #save(annotator_summary, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/annotatorsummary.RData")
 
+# PCA to see how much variability is represented by the visualization on 3D 
 pca <- prcomp(annotator_df, scale. = TRUE)
 pca_data <- as.data.frame(pca$x[, 1:3]) 
 pca_data$cluster <- as.factor(kmeans_result$cluster)
 summary(pca)
+# only 16%
+
 plot_ly(
   data = pca_data, 
   x = ~PC1, 
@@ -81,7 +85,7 @@ plot_ly(
   type = "scatter3d", 
   mode = "markers"
 ) %>% layout(title = "3D PCA Clustering")
-
+# However, the clusters show somewhat decent separability in 3D
 
 # -------------------------------------------------------------------------------------------------------------------
 # Evaluation 
@@ -217,7 +221,7 @@ res_hc$dunn
 # Relation with other variables (kmeans)
 # -------------------------------------------------------------------------------------------------------------------
 
-# Gender
+# Reversing OHE in order to be able to plot the cluster/demographic proportions
 
 annotator_df$cluster = kmeans_result$cluster
 
@@ -247,6 +251,8 @@ df_plot$gender <- reverse_ohe(df_plot, "gender")
 df_plot$ethnicity <- reverse_ohe(df_plot, "ethnicity")
 df_plot$age <- reverse_ohe(df_plot, "age")
 df_plot$education <- reverse_ohe(df_plot, "education")
+
+# Gender
 
 ggplot(df_plot, aes(x = cluster, fill = gender)) +
   geom_bar(position = "fill") +
