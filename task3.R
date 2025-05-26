@@ -261,7 +261,7 @@ ggplot(df_plot, aes(x = cluster, fill = gender)) +
 
 ggplot(df_plot, aes(x = gender, fill = cluster)) +
   geom_bar(position = "fill") +
-  labs(title = "Gender Composition by Cluster", y = "Proportion", x = "Gender") +
+  labs(title = "Cluster Composition by Gender", y = "Proportion", x = "Gender") +
   theme_minimal()
 
 
