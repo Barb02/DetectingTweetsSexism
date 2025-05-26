@@ -240,6 +240,7 @@ continent_map <- c('Algeria'= 'Middle East & North Africa',
   'United States'= 'North America',
   'Venezuela'= 'Latin America & Caribbean',
   'Viet Nam'= 'East Asia and Pacific')
+# Regions taken from "Global Regions with the Highest and Lowest Gender Parity" in https://worldpopulationreview.com/country-rankings/gender-equality-by-country
 
 df$continent <- continent_map[df$country]
 
