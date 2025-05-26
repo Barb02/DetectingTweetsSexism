@@ -328,3 +328,6 @@ if (length(rules_all_yes) > 0) {
 
 # Most of the rules have personalized features on the LHS (antecedent), while annotator features are rarely included.
 # This confirms that they carry stronger, more direct signals for predicting labeling behavior than annotator demographics.
+
+# Note: Due to these conclusions we decided to stay with our personalized features as individual columns,
+# and added the column Conf to our dataset.
