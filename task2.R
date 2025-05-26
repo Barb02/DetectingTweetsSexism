@@ -23,8 +23,8 @@ library(corrplot)
 
 # -- To have the df without the count YES = NO tweets
 #load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task1.RData")
-#load("/home/barbara/MDS/ATDS/DetectingTweetsSexism/variables/df_after_task1.RData")
-load("C:/Users/marta/OneDrive/Documentos/FCUP/TACD/project/DetectingTweetsSexism/variables/df_after_task1.RData")
+load("/home/barbara/MDS/ATDS/DetectingTweetsSexism/variables/df_after_task1.RData")
+#load("C:/Users/marta/OneDrive/Documentos/FCUP/TACD/project/DetectingTweetsSexism/variables/df_after_task1.RData")
 
 df <- df[ , 1:10]
 
@@ -146,7 +146,8 @@ ggplot(df_plot, aes(x = Var1, y = Freq, fill = Var2)) +
     y = "Proportion",
     fill = "Label"
   ) +
-  scale_fill_manual(values = c("YES" = "lightgreen", "NO" = "tomato"))
+  scale_fill_manual(values = c("YES" = "lightgreen", "NO" = "tomato")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 # -------------------------------------------------------------------------------------------------------------------
 # 5. Education
@@ -172,7 +173,8 @@ ggplot(df_plot, aes(x = Var1, y = Freq, fill = Var2)) +
     y = "Proportion",
     fill = "Label"
   ) +
-  scale_fill_manual(values = c("YES" = "lightgreen", "NO" = "tomato"))
+  scale_fill_manual(values = c("YES" = "lightgreen", "NO" = "tomato")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 # -------------------------------------------------------------------------------------------------------------------
 # 6. Country
@@ -199,7 +201,7 @@ ggplot(df_plot, aes(x = Var1, y = Freq, fill = Var2)) +
     fill = "Label"
   ) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
-  scale_fill_manual(values = c("YES" = "lightgreen", "NO" = "tomato"))
+  scale_fill_manual(values = c("YES" = "lightgreen", "NO" = "tomato")) # zoom plot to see better
 
 # -------------------------------------------------------------------------------------------------------------------
 # 7. Continent/Region
@@ -238,6 +240,7 @@ continent_map <- c('Algeria'= 'Middle East & North Africa',
   'United States'= 'North America',
   'Venezuela'= 'Latin America & Caribbean',
   'Viet Nam'= 'East Asia and Pacific')
+# Regions taken from "Global Regions with the Highest and Lowest Gender Parity" in https://worldpopulationreview.com/country-rankings/gender-equality-by-country
 
 df$continent <- continent_map[df$country]
 
@@ -264,84 +267,6 @@ ggplot(df_plot, aes(x = Var1, y = Freq, fill = Var2)) +
 # country is better, region generalizes too much
 
 # -------------------------------------------------------------------------------------------------------------------
-# 8. Country ~ Gender (see if the people from one country are women or men)
-# -------------------------------------------------------------------------------------------------------------------
-
-table_feature_label <- table(df$gender, df$country)
-table_feature_label
-table_feature_label_norm <- prop.table(table_feature_label, 2) # by col
-df_plot <- as.data.frame(table_feature_label_norm)
-
-ggplot(df_plot, aes(x = Var2, y = Freq, fill = Var1)) + 
-  geom_bar(stat = "identity", position = "dodge", width = 0.7) + 
-  theme_minimal() +
-  labs(
-    title = "Gender proportion by Country",
-    x = "Country", 
-    y = "Proportion",
-    fill = "Label"
-  ) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
-  scale_fill_manual(values = c("F" = "pink", "M" = "lightblue"))
-
-# -------------------------------------------------------------------------------------------------------------------
-# Correlation
-# -------------------------------------------------------------------------------------------------------------------
-
-df_cor <- df[ , 5:10]
-
-df_cor$label_task1_1 <- ifelse(df_cor$label_task1_1 == "YES", 1, 0)
-
-df_dummies <- dummy_cols(df_cor[, 1:5], remove_selected_columns = TRUE)
-
-df_all  <- cbind(df_dummies, df_cor[ , !(names(df_cor) %in% names(df_cor[, 1:5]))])
-
-cor_matrix <- cor(df_all, use = "complete.obs")
-
-corrplot(cor_matrix,
-         method = "circle",
-         type = "upper",
-         tl.cex = 0.4,
-         tl.srt = 45,
-         cl.cex = 1.0,
-         title = "Correlation Matrix of Features",
-         mar = c(0, 0, 0, 0))
-
-cor_label <- cor_matrix[,"label_task1_1"]
-cor_label <- cor_label[!names(cor_label) %in% "label_task1_1"]
-cor_label <- cor_label[order(abs(cor_label), decreasing = TRUE)]
-print(cor_label)
-
-# -------------------------------------------------------------------------------------------------------------------
-# Distribution
-# -------------------------------------------------------------------------------------------------------------------
-
-df_all <- df_all %>% 
-  select(label_task1_1, everything())
-
-n_yes <- sum(df_all$label_task1_1 == 1)
-n_no  <- sum(df_all$label_task1_1 == 0)
-
-yes_counts <- colSums(df_all[df_all$label_task1_1 == 1, 2:52] >= 1)
-no_counts  <- colSums(df_all[df_all$label_task1_1 == 0, 2:52] >= 1)
-
-yes_prop <- yes_counts / n_yes
-no_prop  <- no_counts  / n_no
-
-result <- data.frame(
-  Column = names(df_all)[2:52],
-  Count_1 = yes_counts,
-  Proportion_1 = round(yes_prop, 3),
-  Count_0 = no_counts,
-  Proportion_0 = round(no_prop, 3)
-)
-
-result$Difference <- abs(result$Proportion_1 - result$Proportion_0)
-result <- result[order(-result$Difference), ]
-
-print(result)
-
-# -------------------------------------------------------------------------------------------------------------------
 # Logistic Regression
 # -------------------------------------------------------------------------------------------------------------------
 
@@ -364,20 +289,17 @@ df_cor$ethnicity <- relevel(df_cor$ethnicity, ref = "White or Caucasian")
 model_logit <- glm(label_task1_1 ~ ., data = df_cor, family = binomial)
 summary(model_logit)
 
-model_logit <- glm(label_task1_1 ~ . + age * gender + country * gender, data = df_cor, family = binomial)
-summary(model_logit)
-
 # -------------------------------------------------------------------------------------------------------------------
 # Conclusions from Task 2 
 # -------------------------------------------------------------------------------------------------------------------
 
-# Here is what we took from: 
+# Here is what we took as features, based on logistic regression and plot results: 
 
 # 1. Gender -> Not significant but might be important for interactions (ex: age x gender)
 
-# 2. Age -> age23-45 , age46+
+# 2. Age -> age18-22
 
-# 4. Ethnicity -> ethnicityMiddle Eastern, ethnicityother, ethnicityMultiracial, ethnicityBlack or African American
+# 4. Ethnicity -> ethnicityMiddle Eastern, ethnicityMultiracial, ethnicityBlack or African American
 
 # 5. Education -> educationBachelor’s degree, educationDoctorate
 
