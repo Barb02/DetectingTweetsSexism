@@ -289,9 +289,6 @@ df_cor$ethnicity <- relevel(df_cor$ethnicity, ref = "White or Caucasian")
 model_logit <- glm(label_task1_1 ~ ., data = df_cor, family = binomial)
 summary(model_logit)
 
-model_logit <- glm(label_task1_1 ~ . + age * gender + country * gender, data = df_cor, family = binomial)
-summary(model_logit)
-
 # -------------------------------------------------------------------------------------------------------------------
 # Conclusions from Task 2 
 # -------------------------------------------------------------------------------------------------------------------
@@ -300,9 +297,9 @@ summary(model_logit)
 
 # 1. Gender -> Not significant but might be important for interactions (ex: age x gender)
 
-# 2. Age -> age23-45 , age46+
+# 2. Age -> age18-22
 
-# 4. Ethnicity -> ethnicityMiddle Eastern, ethnicityother, ethnicityMultiracial, ethnicityBlack or African American
+# 4. Ethnicity -> ethnicityMiddle Eastern, ethnicityMultiracial, ethnicityBlack or African American
 
 # 5. Education -> educationBachelor’s degree, educationDoctorate
 
