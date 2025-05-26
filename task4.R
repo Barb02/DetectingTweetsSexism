@@ -277,7 +277,7 @@ if (length(rules_all_yes) > 0) {
 
 # Most of the rules have personalized features on the LHS (antecedent), while annotator features are rarely included.
 # This means that they carry stronger, more direct signals for predicting labeling behavior than annotator demographics.
-# We can observe that all the rules have colloc_yes=yes. Therefore we are going to analise this case.
+# We can observe that all the rules have colloc_yes=yes. Therefore we are going to analyse this case.
 
 
 
