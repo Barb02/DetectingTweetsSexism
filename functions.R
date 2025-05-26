@@ -21,8 +21,10 @@ library(corrplot)
 library(purrr)
 library(fastDummies)
 library(caret)
-load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/top_collocs_yes_2.RData")
-load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/top_collocs_no_2.RData")
+#load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/top_collocs_yes_2.RData")
+#load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/top_collocs_no_2.RData")
+load("/home/barbara/MDS/ATDS/DetectingTweetsSexism/variables/top_collocs_yes_2.RData")
+load("/home/barbara/MDS/ATDS/DetectingTweetsSexism/variables/top_collocs_no_2.RData")
 
 # -------------------------------------------------------------------------------------------------------------------
 # Function used to create the features based on the conclusions taken from the important words
