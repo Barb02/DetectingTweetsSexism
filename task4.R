@@ -147,10 +147,10 @@ inspect(head(sorted_cluster_rules, n = min(10, length(sorted_cluster_rules))))
 
 
 #=================================================
-# Feature importance on our personalized features
+# Feature importance of our personalized features
 #=================================================
 
-#Define preselected features
+# Define preselected features
 preselected <- c(
   "word_woman", "word_women", "word_men", "word_girl", "word_sex",
   "word_bitch", "word_fuck", "word_love", "word_peopl", "word_gender",
@@ -162,54 +162,45 @@ preselected <- c(
   "country_Ireland", "country_Israel"
 )
 
-# For Association Rule Mining (ARM)
+# Binary columns for ARM (subset of preselected)
+binary_cols <- preselected[preselected %in% names(df_train_train) & 
+                             sapply(df_train_train[preselected], function(x) all(x %in% c(0, 1)))]
+
+# Prepare data for ARM
 df_train_arm <- df_train_train
-binary_cols <- c(
-  "word_woman", "word_women", "word_men", "word_girl", "word_sex",
-  "word_bitch", "word_fuck", "word_love", "word_peopl", "word_gender",
-  "colloc_yes", "colloc_no", "gender_F", "age_18_22", "all_pos", "all_neg",
-  "ethnicity_Middle_Eastern", "ethnicity_other", "ethnicity_Multiracial",
-  "ethnicity_Black_or_African_American", "education_Bachelors_degree",
-  "education_Doctorate", "country_Algeria", "country_Canada", "country_Cyprus",
-  "country_Ireland", "country_Israel"
-)
 df_train_arm[binary_cols] <- lapply(df_train_arm[binary_cols], function(x) factor(ifelse(x == 1, "yes", "no")))
 
-# Discretize continuous variables
-df_train_arm$tweet_sentiment <- ifelse(df_train_train$tweet_sentiment > median(df_train_train$tweet_sentiment), "sentiment_high", "sentiment_low")
-df_train_arm$sadness         <- ifelse(df_train_train$sadness > median(df_train_train$sadness), "sadness_high", "sadness_low")
-df_train_arm$sent_min        <- ifelse(df_train_train$sent_min > median(df_train_train$sent_min), "sent_min_high", "sent_min_low")
-df_train_arm$disgust_max     <- ifelse(df_train_train$disgust_max > median(df_train_train$disgust_max), "disgust_high", "disgust_low")
+# Discretize selected continuous features
+disc_vars <- c("tweet_sentiment", "sadness", "sent_min", "disgust_max")
+for (var in disc_vars) {
+  med <- median(df_train_train[[var]], na.rm = TRUE)
+  df_train_arm[[var]] <- ifelse(df_train_train[[var]] > med, paste0(var, "_high"), paste0(var, "_low"))
+}
 
+# Subset and clean column names
 df_train_arm <- df_train_arm[, c(preselected, "label_task1_1")]
-names(df_train_arm) <- make.names(names(df_train_arm), unique = TRUE)
-
-# For Modeling Information Gain
-df_train_model <- df_train_train[, c(preselected, "label_task1_1")]
+df_train_model <- df_train_arm
 df_train_model$label_task1_1 <- as.factor(df_train_model$label_task1_1)
-names(df_train_model) <- make.names(names(df_train_model), unique = TRUE)
 
+# Sanitize names
+names(df_train_arm) <- make.names(names(df_train_arm), unique = TRUE)
+names(df_train_model) <- names(df_train_arm)
 
+# Compute Information Gain
 info_gain <- information_gain(label_task1_1 ~ ., df_train_model)
 info_gain <- info_gain[order(-info_gain$importance), , drop = FALSE]
-info_gain_top <- info_gain[order(-info_gain$importance), ][1:15, ]
-info_gain_top_features <- rownames(info_gain_top)
+info_gain_top <- head(info_gain, 15)
 
-
-cat("\n Top 15 Features by Information Gain:\n")
+cat("\nTop 15 Features by Information Gain:\n")
 print(info_gain_top)
 
-
-# plot
+# Plot
+library(ggplot2)
 info_plot_df_train <- data.frame(
-  Feature = info_gain_top$attributes,
+  Feature = factor(info_gain_top$attributes, levels = rev(info_gain_top$attributes)),
   Importance = info_gain_top$importance
 )
 
-# Make sure the plot uses feature names, ordered by importance
-info_plot_df_train$Feature <- factor(info_plot_df_train$Feature, levels = info_plot_df_train$Feature[order(info_plot_df_train$Importance)])
-
-# Plot
 ggplot(info_plot_df_train, aes(x = Feature, y = Importance)) +
   geom_bar(stat = "identity", fill = "darkorange") +
   coord_flip() +
@@ -218,116 +209,179 @@ ggplot(info_plot_df_train, aes(x = Feature, y = Importance)) +
 
 
 
-# =========================
-# COLLOC_YES Impact Check
-# =========================
-
-# Run Apriori without colloc_yes
-cat("\n Now discovering rules with colloc_yes removed...\n")
-
-# Remove colloc_yes from the preselected features
-preselected_no_colloc <- setdiff(preselected, "colloc_yes")
-
-# Prepare a fresh df_train_arm without colloc_yes
-df_train_arm_nocolloc <- df_train_train
-
-# Convert relevant binary features
-binary_cols_nocolloc <- intersect(preselected_no_colloc, colnames(df_train_arm_nocolloc))[1:29]
-df_train_arm_nocolloc[binary_cols_nocolloc] <- lapply(df_train_arm_nocolloc[binary_cols_nocolloc], function(x) factor(ifelse(x == 1, "yes", "no")))
-
-# Discretize numeric variables again
-df_train_arm_nocolloc$tweet_sentiment <- ifelse(df_train_train$tweet_sentiment > median(df_train_train$tweet_sentiment), "sentiment_high", "sentiment_low")
-df_train_arm_nocolloc$sadness         <- ifelse(df_train_train$sadness > median(df_train_train$sadness), "sadness_high", "sadness_low")
-df_train_arm_nocolloc$sent_min        <- ifelse(df_train_train$sent_min > median(df_train_train$sent_min), "sent_min_high", "sent_min_low")
-df_train_arm_nocolloc$disgust_max     <- ifelse(df_train_train$disgust_max > median(df_train_train$disgust_max), "disgust_high", "disgust_low")
-
-# Subset relevant features
-df_train_arm_nocolloc <- df_train_arm_nocolloc[, c(preselected_no_colloc, "label_task1_1")]
-df_train_arm_nocolloc[] <- lapply(df_train_arm_nocolloc, as.factor)
-names(df_train_arm_nocolloc) <- make.names(names(df_train_arm_nocolloc), unique = TRUE)
-
-# Convert to transactions
-trans_nocolloc <- as(df_train_arm_nocolloc, "transactions")
-
-# Run Apriori
-rules_nocolloc <- apriori(trans_nocolloc,
-                          parameter = list(supp = 0.02, conf = 0.7, maxlen = 4))
-
-# Filter and sort
-rules_nocolloc_yes <- subset(rules_nocolloc, rhs %in% "label_task1_1=YES" & lift > 1)
-rules_nocolloc_yes <- sort(rules_nocolloc_yes, by = "lift", decreasing = TRUE)
-
-# Show results
-cat("\n Top 10 Rules WITHOUT colloc_yes:\n")
-if (length(rules_nocolloc_yes) > 0) {
-  inspect(head(rules_nocolloc_yes, 10))
-} else {
-  cat("No strong rules found without colloc_yes.\n")
-}
-
-# By retrieving colloc_yes we observe that there is another feature that contributes to the high values of lift and confidence (word_women).
-# However, when this variable is removed, the same pattern emerge (another variable dominate the rules).
-# This means that these features are individually strong.
-
-
-
 # =========================================================
 # Combined annotator + personalized Features (LABEL = YES)
 # =========================================================
 
-# Define full feature set (annotator + personalized)
-combined_features <- c(
-  "gender", "age", "ethnicity", "education", "country",
+# Define feature sets
+binary_tweet_cols <- c(
   "word_woman", "word_women", "word_men", "word_girl", "word_sex",
   "word_bitch", "word_fuck", "word_love", "word_peopl", "word_gender",
-  "colloc_yes", "colloc_no",
-  "all_pos", "all_neg", "tweet_sentiment",
-  "sadness", "sent_min", "disgust_max",
+  "colloc_yes", "colloc_no", "all_pos", "all_neg"
+)
+
+disc_vars <- c("tweet_sentiment", "sadness", "sent_min", "disgust_max")
+
+combined_features <- c(
+  "gender", "age", "ethnicity", "education", "country",
+  binary_tweet_cols, disc_vars,
   "label_task1_1"
 )
 
 # Subset and prepare data
 df_train_combined <- df_train_train[, combined_features]
 
-# Convert binary tweet columns to yes/no
-binary_tweet_cols <- c(
-  "word_woman", "word_women", "word_men", "word_girl", "word_sex",
-  "word_bitch", "word_fuck", "word_love", "word_peopl", "word_gender",
-  "colloc_yes", "colloc_no", "all_pos", "all_neg"
+# Convert binary tweet columns to "yes"/"no"
+df_train_combined[binary_tweet_cols] <- lapply(
+  df_train_combined[binary_tweet_cols],
+  function(x) factor(ifelse(x == 1, "yes", "no"))
 )
-df_train_combined[binary_tweet_cols] <- lapply(df_train_combined[binary_tweet_cols], function(x) factor(ifelse(x == 1, "yes", "no")))
 
-# Discretize numeric variables
-df_train_combined$tweet_sentiment <- ifelse(df_train_train$tweet_sentiment > median(df_train_train$tweet_sentiment), "sentiment_high", "sentiment_low")
-df_train_combined$sadness         <- ifelse(df_train_train$sadness > median(df_train_train$sadness), "sadness_high", "sadness_low")
-df_train_combined$sent_min        <- ifelse(df_train_train$sent_min > median(df_train_train$sent_min), "sent_min_high", "sent_min_low")
-df_train_combined$disgust_max     <- ifelse(df_train_train$disgust_max > median(df_train_train$disgust_max), "disgust_high", "disgust_low")
+# Discretize selected numeric variables
+for (var in disc_vars) {
+  median_val <- median(df_train_train[[var]], na.rm = TRUE)
+  df_train_combined[[var]] <- ifelse(
+    df_train_train[[var]] > median_val,
+    paste0(var, "_high"),
+    paste0(var, "_low")
+  )
+}
 
 # Convert all columns to factor
 df_train_combined[] <- lapply(df_train_combined, as.factor)
+
+# Sanitize column names
 names(df_train_combined) <- make.names(names(df_train_combined), unique = TRUE)
 
 # Convert to transaction format
 trans_all <- as(df_train_combined, "transactions")
 
 # Mine rules
-rules_all_yes <- apriori(trans_all,
-                         parameter = list(supp = 0.02, conf = 0.7, maxlen = 4))
+rules_all_yes <- apriori(
+  trans_all,
+  parameter = list(supp = 0.02, conf = 0.7, maxlen = 4)
+)
 
-# Filter rules for label = YES
+# Filter rules for label = YES and lift > 1
 rules_all_yes <- subset(rules_all_yes, rhs %in% "label_task1_1=YES" & lift > 1)
 rules_all_yes <- sort(rules_all_yes, by = "lift", decreasing = TRUE)
 
 # Output
-cat("\n Top 10 Rules (Combined features, label = YES):\n")
+cat("\nTop 10 Rules (Combined features, label = YES):\n")
 if (length(rules_all_yes) > 0) {
   inspect(head(rules_all_yes, 10))
 } else {
-  cat(" No strong rules found for label = YES.\n")
+  cat("No strong rules found for label = YES.\n")
 }
 
+
 # Most of the rules have personalized features on the LHS (antecedent), while annotator features are rarely included.
-# This confirms that they carry stronger, more direct signals for predicting labeling behavior than annotator demographics.
+# This means that they carry stronger, more direct signals for predicting labeling behavior than annotator demographics.
+# We can observe that all the rules have colloc_yes=yes. Therefore we are going to analise this case.
+
+
+
+# =========================
+# COLLOC_YES Impact Check
+# =========================
+
+# WITH COLLOC_YES
+
+# Define logical masks
+antecedent <- df_train_combined$colloc_yes == "yes"
+consequent <- df_train_combined$label_task1_1 == "YES"
+
+# Compute counts
+n_total <- nrow(df_train_combined)
+n_antecedent <- sum(antecedent)
+n_consequent <- sum(consequent)
+n_both <- sum(antecedent & consequent)
+
+# Compute metrics
+support <- n_both / n_total
+confidence <- if (n_antecedent > 0) n_both / n_antecedent else NA
+coverage <- n_antecedent / n_total
+lift <- if (n_consequent > 0) confidence / (n_consequent / n_total) else NA
+count <- n_both
+
+# Display results
+cat("\nRule: {colloc_yes=yes} => {label_task1_1=YES}\n")
+cat("Support  :", round(support, 6), "\n")
+cat("Confidence:", round(confidence, 6), "\n")
+cat("Coverage :", round(coverage, 6), "\n")
+cat("Lift     :", round(lift, 6), "\n")
+cat("Count    :", count, "\n")
+
+# WITHOUT COLLOC_YES
+
+# Define feature sets
+binary_tweet_cols <- c(
+  "word_woman", "word_women", "word_men", "word_girl", "word_sex",
+  "word_bitch", "word_fuck", "word_love", "word_peopl", "word_gender",
+  "colloc_no", "all_pos", "all_neg"  # <- colloc_yes removed
+)
+
+disc_vars <- c("tweet_sentiment", "sadness", "sent_min", "disgust_max")
+
+combined_features <- c(
+  "gender", "age", "ethnicity", "education", "country",
+  binary_tweet_cols, disc_vars,
+  "label_task1_1"
+)
+
+# Subset and prepare data
+df_train_combined <- df_train_train[, combined_features]
+
+# Convert binary tweet columns to "yes"/"no"
+df_train_combined[binary_tweet_cols] <- lapply(
+  df_train_combined[binary_tweet_cols],
+  function(x) factor(ifelse(x == 1, "yes", "no"))
+)
+
+# Discretize selected numeric variables
+for (var in disc_vars) {
+  median_val <- median(df_train_train[[var]], na.rm = TRUE)
+  df_train_combined[[var]] <- ifelse(
+    df_train_train[[var]] > median_val,
+    paste0(var, "_high"),
+    paste0(var, "_low")
+  )
+}
+
+# Convert all columns to factor
+df_train_combined[] <- lapply(df_train_combined, as.factor)
+
+# Sanitize column names
+names(df_train_combined) <- make.names(names(df_train_combined), unique = TRUE)
+
+# Convert to transaction format
+trans_all <- as(df_train_combined, "transactions")
+
+# Mine rules
+rules_all_yes <- apriori(
+  trans_all,
+  parameter = list(supp = 0.02, conf = 0.7, maxlen = 4)
+)
+
+# Filter rules for label = YES and lift > 1
+rules_all_yes <- subset(rules_all_yes, rhs %in% "label_task1_1=YES" & lift > 1)
+rules_all_yes <- sort(rules_all_yes, by = "lift", decreasing = TRUE)
+
+# Output
+cat("\nTop 10 Rules (Combined features, label = YES):\n")
+if (length(rules_all_yes) > 0) {
+  inspect(head(rules_all_yes, 10))
+} else {
+  cat("No strong rules found for label = YES.\n")
+}
+
+# We confirm that colloc_yes is by itself has high metric values.
+# By retrieving colloc_yes we observe that there is another feature that contributes to the high values of lift and confidence (word_women).
+# However, when this variable is removed, the same pattern emerge (another variable dominate the rules).
+# This means that these features are individually strong.
+
+
+
 
 # Note: Due to these conclusions we decided to stay with our personalized features as individual columns,
 # and added the column Conf to our dataset.
