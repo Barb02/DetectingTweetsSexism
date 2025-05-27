@@ -673,39 +673,24 @@ corrplot(cor_matrix,
 
 stats_emot_sent <- function(df) {
   
-  sentences_per_tweet <- lapply(df$tweet, get_sentences)
-  all_sentences <- unlist(sentences_per_tweet)
-  tweet_lengths <- sapply(sentences_per_tweet, length)
-  repeated_tweets <- rep(df$tweet, tweet_lengths)
+  df_result <- df %>%
+    rowwise() %>%
+    mutate(
+      # Divide o tweet em frases
+      sentences = list(get_sentences(tweet)),
+      
+      # Calcula os sentimentos por frase
+      sent_min = min(get_sentiment(sentences[[1]], method = "syuzhet"), na.rm = TRUE),
+      disgust_max = max(get_nrc_sentiment(sentences[[1]])$disgust, na.rm = TRUE),
+      
+      # Sentimento do tweet completo
+      tweet_sentiment = get_sentiment(tweet, method = "syuzhet"),
+      sadness = get_nrc_sentiment(tweet)$sadness
+    ) %>%
+    ungroup() %>%
+    select(-sentences)  # Remove a lista de frases, se quiser
   
-  df_sentences <- data.frame(
-    tweet = repeated_tweets,
-    sentence = all_sentences,
-    stringsAsFactors = FALSE
-  )
-  
-  df_sentences$sentiment <- get_sentiment(df_sentences$sentence, method = "syuzhet")
-  df_sentences$disgust <- get_nrc_sentiment(df_sentences$sentence)$disgust
-  
-  df_tweet_level <- data.frame(
-    tweet = df$tweet,
-    tweet_sentiment = get_sentiment(df$tweet, method = "syuzhet"),
-    sadness = get_nrc_sentiment(df$tweet)$sadness,
-    stringsAsFactors = FALSE
-  )
-  
-  sentence_features <- df_sentences %>%
-    group_by(tweet) %>%
-    summarise(
-      sent_min = min(sentiment, na.rm = TRUE),
-      disgust_max = max(disgust, na.rm = TRUE)
-    )
-  
-  df_final <- df %>%
-    left_join(df_tweet_level, by = "tweet") %>%
-    left_join(sentence_features, by = "tweet")
-  
-  return(df_final)
+  return(df_result)
 }
 
 df_final <- stats_emot_sent(df_final)
@@ -783,6 +768,6 @@ print(result)
 # Exporting the data set to model in Python
 # -------------------------------------------------------------------------------------------------------------------
 
-write.csv(df_final, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/task1.csv", row.names = FALSE)
+#write.csv(df_final, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/task1.csv", row.names = FALSE)
 
 
