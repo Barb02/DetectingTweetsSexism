@@ -26,34 +26,26 @@ df = read_csv("/home/barbara/MDS/ATDS/DetectingTweetsSexism/tables/EXIST_test_no
 names(df)[names(df) == "age_group"] <- "age"
 names(df)[names(df) == "annotator"] <- "annotator_id"
 names(df)[names(df) == "study_level"] <- "education"
+
+# For all
 names(df)[names(df) == "gender"] <- "gender.x"
 
 # -------------------------------------------------------------------------------------------------------------------
 # Task 1
 # -------------------------------------------------------------------------------------------------------------------
 
-# For labeled and test
 df <- important_words(df, tweet_col = "tweet")
 df <- coloc(df)
 df <- sent_seq(df)
 df <- stats_emot_sent(df)
 
-# For labeled
+# For labeled and train
 names(df)[11:20] <- paste0("word_", names(df)[11:20])
 names(df)[names(df) == "gender.x"] <- "gender"
 
 # For test
 names(df)[10:19] <- paste0("word_", names(df)[10:19])
 names(df)[names(df) == "gender.x"] <- "gender"
-
-# For train
-df2 = read_csv("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/task1.csv")
-df <- inner_join(df, df2, by = "tweet")
-df <- subset(df, select = -final_label)
-names(df)[names(df) == "gender.x"] <- "gender"
-names(df)[11:20] <- paste0("word_", names(df)[11:20])
-names(df)[names(df) == "word_gender.y"] <- "word_gender"
-
 
 #save(df, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/df_after_task1.RData")
 #save(df, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/dfval_after_task1.RData")
@@ -112,7 +104,7 @@ df <- cbind(df, df_dummies2)
 #write.csv(df, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/df_after_task_2_3.csv", row.names = FALSE)
 #write.csv(df, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/dfval_after_task_2_3.csv", row.names = FALSE)
 
-#save(df, file = "/home/barbara/MDS/ATDS/DetectingTweetsSexism/variables/dftest_after_task_2_3.RData")
+#save(df, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/dftest_after_task_2_3.RData")
 
 # -------------------------------------------------------------------------------------------------------------------
 # Task 4
@@ -125,7 +117,7 @@ df_train <- df
 rm(df)
 
 load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/dfval_after_task_2_3.RData")
-load("/home/barbara/MDS/ATDS/DetectingTweetsSexism/variables/dftest_after_task_2_3.RData")
+load("C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/variables/dftest_after_task_2_3.RData")
 
 df_val <- df
 rm(df)
@@ -140,7 +132,7 @@ dftest_after_task4 <- subset(dftest_after_task4, select = -profile_key)
 
 #write.csv(df_after_task4, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/trainfinal.csv", row.names = FALSE)
 #write.csv(dfval_after_task4, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/valfinal.csv", row.names = FALSE)
-#write.csv(dftest_after_task4, file = "/home/barbara/MDS/ATDS/DetectingTweetsSexism/tables/testfinal.csv", row.names = FALSE)
+#write.csv(dftest_after_task4, file = "C:/Users/claud/OneDrive/Ambiente de Trabalho/TACD/Projeto/DetectingTweetsSexism/tables/testfinal.csv", row.names = FALSE)
 
 
 

@@ -312,11 +312,15 @@ cat("Coverage :", round(coverage, 6), "\n")
 cat("Lift     :", round(lift, 6), "\n")
 cat("Count    :", count, "\n")
 
+
+# We confirm that colloc_yes is by itself has high metric values.
+
+
 # WITHOUT COLLOC_YES
 
 # Define feature sets
 binary_tweet_cols <- c(
-  "word_woman", "word_women", "word_men", "word_girl", "word_sex",
+  "word_woman", "word_girl", "word_women", "word_men", "word_sex",
   "word_bitch", "word_fuck", "word_love", "word_peopl", "word_gender",
   "colloc_no", "all_pos", "all_neg"  # <- colloc_yes removed
 )
@@ -360,7 +364,7 @@ trans_all <- as(df_train_combined, "transactions")
 # Mine rules
 rules_all_yes <- apriori(
   trans_all,
-  parameter = list(supp = 0.02, conf = 0.7, maxlen = 4)
+  parameter = list(supp = 0.02, conf = 0.5, maxlen = 4)
 )
 
 # Filter rules for label = YES and lift > 1
@@ -375,12 +379,10 @@ if (length(rules_all_yes) > 0) {
   cat("No strong rules found for label = YES.\n")
 }
 
-# We confirm that colloc_yes is by itself has high metric values.
+
 # By retrieving colloc_yes we observe that there is another feature that contributes to the high values of lift and confidence (word_women).
 # However, when this variable is removed, the same pattern emerge (another variable dominate the rules).
-# This means that these features are individually strong.
-
-
+# This confirms that these features are individually powerfull.
 
 
 # Note: Due to these conclusions we decided to stay with our personalized features as individual columns,
